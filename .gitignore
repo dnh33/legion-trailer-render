@@ -1,5 +1,5 @@
 .video-tmp/
-.pw/
+.pwdeps/
 node_modules/
 docs/*/*.mp4
 docs/*/*.wav

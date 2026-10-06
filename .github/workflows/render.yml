@@ -5,14 +5,14 @@ name: Render trailer
 # (public, so the files download without a login).
 #
 # Start a render either way:
-#   - push a change to render.json (which trailer, how many shards), or
+#   - push a change to render.json (which trailer, how many shards) or to this file, or
 #   - Actions → Render trailer → Run workflow.
 # Every shard runs on the same runner image so frames match across shard joins (fonts are bundled in ui/src/fonts).
 
 on:
   push:
     branches: [main]
-    paths: [render.json]
+    paths: [render.json, .github/workflows/render.yml]
   workflow_dispatch:
     inputs:
       trailer:
@@ -34,8 +34,9 @@ concurrency:
 
 env:
   VIDEO_TMP: ${{ github.workspace }}/.video-tmp
-  PLAYWRIGHT_PATH: ${{ github.workspace }}/.pw/node_modules/playwright
-  PW_VERSION: "1.55.0"
+  PW_DIR: ${{ github.workspace }}/.pwdeps
+  PLAYWRIGHT_PATH: ${{ github.workspace }}/.pwdeps/node_modules/playwright
+  PW_VERSION: "1.63.0"          # same Playwright as the local renders
 
 jobs:
   plan:
@@ -82,8 +83,12 @@ jobs:
         with: { node-version: 22 }
       - name: Playwright + Chromium
         run: |
-          mkdir -p .pw && cd .pw && npm init -y >/dev/null && npm i --no-audit --no-fund playwright@${PW_VERSION}
-          if [ "$RUNNER_OS" = "Linux" ]; then npx playwright install --with-deps chromium; else npx playwright install chromium; fi
+          set -euo pipefail
+          mkdir -p "$PW_DIR" && cd "$PW_DIR"
+          echo '{"name":"pwdeps","private":true}' > package.json
+          npm i --no-audit --no-fund "playwright@${PW_VERSION}"
+          if [ "$RUNNER_OS" = "Linux" ]; then ./node_modules/.bin/playwright install --with-deps chromium; else ./node_modules/.bin/playwright install chromium; fi
+          test -f "$PLAYWRIGHT_PATH/index.mjs"
       - name: Render shard
         run: |
           CPUS=$(node -p "require('os').cpus().length")
@@ -107,8 +112,13 @@ jobs:
         with: { node-version: 22 }
       - name: Playwright + Chromium + ffmpeg
         run: |
-          mkdir -p .pw && cd .pw && npm init -y >/dev/null && npm i --no-audit --no-fund playwright@${PW_VERSION}
-          if [ "$RUNNER_OS" = "Linux" ]; then npx playwright install --with-deps chromium; sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg; else npx playwright install chromium; brew install ffmpeg; fi
+          set -euo pipefail
+          mkdir -p "$PW_DIR" && cd "$PW_DIR"
+          echo '{"name":"pwdeps","private":true}' > package.json
+          npm i --no-audit --no-fund "playwright@${PW_VERSION}"
+          if [ "$RUNNER_OS" = "Linux" ]; then ./node_modules/.bin/playwright install --with-deps chromium; sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+          else ./node_modules/.bin/playwright install chromium; command -v ffmpeg || brew install ffmpeg; fi
+          test -f "$PLAYWRIGHT_PATH/index.mjs"
       - run: GIF_COLORS=64 GIF_DITHER=bayer:bayer_scale=4 node docs/${{ needs.plan.outputs.trailer }}/render.mjs --gif-only
       - run: node docs/${{ needs.plan.outputs.trailer }}/render.mjs --poster
       - uses: actions/upload-artifact@v4
