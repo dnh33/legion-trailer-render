@@ -1,0 +1,8 @@
+.video-tmp/
+.pw/
+node_modules/
+docs/*/*.mp4
+docs/*/*.wav
+docs/*/*.gif
+docs/*/poster-*.png
+docs/*/cues.json

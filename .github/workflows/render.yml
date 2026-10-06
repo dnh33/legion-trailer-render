@@ -1,0 +1,167 @@
+name: Render trailer
+
+# Renders a trailer folder (docs/<trailer>/: timeline.mjs + trailer.html + score.py + render.mjs) on parallel
+# Apple-silicon runners, assembles the film with its score on Linux, and publishes the results as a GitHub Release
+# (public, so the files download without a login).
+#
+# Start a render either way:
+#   - push a change to render.json (which trailer, how many shards), or
+#   - Actions → Render trailer → Run workflow.
+# Every shard runs on the same runner image so frames match across shard joins (fonts are bundled in ui/src/fonts).
+
+on:
+  push:
+    branches: [main]
+    paths: [render.json]
+  workflow_dispatch:
+    inputs:
+      trailer:
+        description: "Folder under docs/ (empty = render.json)"
+        default: ""
+      shards:
+        description: "Parallel frame jobs (empty = render.json). Free macOS runners: 5 at a time."
+        default: ""
+      runner:
+        description: "Runner image for frames + GIF (empty = render.json)"
+        default: ""
+
+permissions:
+  contents: write          # the Release with the finished files
+
+concurrency:
+  group: render-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  VIDEO_TMP: ${{ github.workspace }}/.video-tmp
+  PLAYWRIGHT_PATH: ${{ github.workspace }}/.pw/node_modules/playwright
+  PW_VERSION: "1.55.0"
+
+jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    outputs:
+      trailer: ${{ steps.p.outputs.trailer }}
+      shards: ${{ steps.p.outputs.shards }}
+      list: ${{ steps.p.outputs.list }}
+      runner: ${{ steps.p.outputs.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: p
+        env:
+          IN_TRAILER: ${{ inputs.trailer }}
+          IN_SHARDS: ${{ inputs.shards }}
+          IN_RUNNER: ${{ inputs.runner }}
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os, re
+          cfg = json.load(open('render.json'))
+          trailer = os.environ.get('IN_TRAILER') or cfg['trailer']
+          shards = int(os.environ.get('IN_SHARDS') or cfg.get('shards', 5))
+          runner = os.environ.get('IN_RUNNER') or cfg.get('runner', 'macos-15')
+          assert re.fullmatch(r'[a-z0-9-]+', trailer), trailer
+          assert os.path.isfile(f'docs/{trailer}/render.mjs'), f'docs/{trailer}/render.mjs missing'
+          assert 1 <= shards <= 20, shards
+          assert runner in ('macos-15', 'macos-14', 'ubuntu-24.04'), runner
+          print(f'trailer={trailer}'); print(f'shards={shards}'); print(f'runner={runner}')
+          print('list=' + json.dumps(list(range(shards))))
+          PY
+
+  frames:
+    needs: plan
+    name: frames ${{ matrix.shard }}/${{ needs.plan.outputs.shards }}
+    runs-on: ${{ needs.plan.outputs.runner }}
+    timeout-minutes: 150
+    strategy:
+      fail-fast: true
+      matrix:
+        shard: ${{ fromJSON(needs.plan.outputs.list) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Playwright + Chromium
+        run: |
+          mkdir -p .pw && cd .pw && npm init -y >/dev/null && npm i --no-audit --no-fund playwright@${PW_VERSION}
+          if [ "$RUNNER_OS" = "Linux" ]; then npx playwright install --with-deps chromium; else npx playwright install chromium; fi
+      - name: Render shard
+        run: |
+          CPUS=$(node -p "require('os').cpus().length")
+          WORKERS=2; if [ "$CPUS" -ge 4 ]; then WORKERS=3; fi
+          WORKERS=$WORKERS node docs/${{ needs.plan.outputs.trailer }}/render.mjs --shard=${{ matrix.shard }}/${{ needs.plan.outputs.shards }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frames-${{ matrix.shard }}
+          path: ${{ env.VIDEO_TMP }}/frames/*.jpg
+          compression-level: 0
+          retention-days: 2
+
+  gif-poster:
+    needs: plan
+    name: GIF + poster
+    runs-on: ${{ needs.plan.outputs.runner }}
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Playwright + Chromium + ffmpeg
+        run: |
+          mkdir -p .pw && cd .pw && npm init -y >/dev/null && npm i --no-audit --no-fund playwright@${PW_VERSION}
+          if [ "$RUNNER_OS" = "Linux" ]; then npx playwright install --with-deps chromium; sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg; else npx playwright install chromium; brew install ffmpeg; fi
+      - run: GIF_COLORS=64 GIF_DITHER=bayer:bayer_scale=4 node docs/${{ needs.plan.outputs.trailer }}/render.mjs --gif-only
+      - run: node docs/${{ needs.plan.outputs.trailer }}/render.mjs --poster
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gif-poster
+          path: |
+            docs/${{ needs.plan.outputs.trailer }}/*.gif
+            docs/${{ needs.plan.outputs.trailer }}/poster-*.png
+
+  assemble:
+    needs: [plan, frames, gif-poster]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      D: docs/${{ needs.plan.outputs.trailer }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: ffmpeg, numpy, scipy (the score)
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+          python3 -m pip install --quiet numpy scipy
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: frames-*
+          path: ${{ env.VIDEO_TMP }}/frames
+          merge-multiple: true
+      - name: Timing rules
+        run: if [ -f "$D/check.mjs" ]; then node "$D/check.mjs"; fi
+      - name: Encode the film with its score (no browser)
+        run: node "$D/render.mjs" --assemble
+      - name: Cutdowns
+        run: if [ -f "$D/xcut.mjs" ]; then node "$D/xcut.mjs"; fi
+      - uses: actions/download-artifact@v4
+        with: { name: gif-poster, path: "${{ env.D }}" }
+      - name: Report
+        run: |
+          {
+            echo "## ${{ needs.plan.outputs.trailer }} (${{ needs.plan.outputs.shards }} shards on ${{ needs.plan.outputs.runner }})"
+            echo '```'
+            for f in "$D"/*.mp4; do
+              echo "$(basename "$f")  $(du -h "$f" | cut -f1)"
+              ffprobe -v error -show_entries stream=codec_type,duration,nb_frames -of csv "$f"
+              ffmpeg -hide_banner -i "$f" -af ebur128=peak=true -f null - 2>&1 | grep -E '^\s+(I|Peak):'
+            done
+            (cd "$D" && sha256sum *.mp4 *.gif poster-*.png)
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY" > "$RUNNER_TEMP/notes.md"
+      - name: Publish as a Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ needs.plan.outputs.trailer }}-r${{ github.run_number }}"
+          gh release create "$TAG" --target "$GITHUB_SHA" --title "$TAG" --notes-file "$RUNNER_TEMP/notes.md" \
+            "$D"/*.mp4 "$D"/*.gif "$D"/poster-*.png "$D"/cues.json
