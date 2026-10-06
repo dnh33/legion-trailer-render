@@ -27,7 +27,7 @@ if (total > 24) throw new Error(`X cut is ${total} bars, over 60 s`);   // whole
 const XF = 0.06, FADE = 0, dur = total * BAR;   // the film's own end fade is inside the last segment
 const v = [], a = [];
 SEG.forEach(([s, e], i) => {
-  const t0 = b(s) + (s === 66 ? 1 / FPS : 0), t1 = b(e), d = t1 - t0;
+  const t0 = b(s) + (s === 66 ? 1 / FPS : 0), t1 = b(e) - .5 / FPS, d = t1 - t0;   // end half a frame early: a cut on the bar line belongs to the next shot
   v.push(`[${i}:v]setpts=PTS-STARTPTS[v${i}]`);   // one seeked input per segment (trim on one input buffered the whole film)
   let af = `[${i}:a]asetpts=PTS-STARTPTS`;
   if (i > 0) af += `,afade=t=in:st=0:d=${XF}`;
@@ -40,7 +40,7 @@ const fc = [...v, ...a,
   `${SEG.map((_, i) => `[v${i}]`).join('')}concat=n=${n}:v=1:a=0[vo]`,
   `${SEG.map((_, i) => `[a${i}]`).join('')}concat=n=${n}:v=0:a=1,loudnorm=I=-14:TP=-1.5:LRA=11[ao]`,
 ].join(';');
-const r = spawnSync('ffmpeg', ['-y', '-hide_banner', '-loglevel', 'error', ...SEG.flatMap(([s0, e0]) => { const t0 = b(s0) + (s0 === 66 ? 1 / FPS : 0); return ['-ss', t0.toFixed(4), '-t', (b(e0) - t0).toFixed(4), '-i', src]; }), '-filter_complex', fc, '-map', '[vo]', '-map', '[ao]',
+const r = spawnSync('ffmpeg', ['-y', '-hide_banner', '-loglevel', 'error', ...SEG.flatMap(([s0, e0]) => { const t0 = b(s0) + (s0 === 66 ? 1 / FPS : 0); return ['-ss', t0.toFixed(4), '-t', (b(e0) - .5 / FPS - t0).toFixed(4), '-i', src]; }), '-filter_complex', fc, '-map', '[vo]', '-map', '[ao]',
   '-c:v', 'libx264', '-preset', 'slow', '-crf', '19', '-maxrate', '5000k', '-bufsize', '10000k', '-pix_fmt', 'yuv420p', '-profile:v', 'high',
   '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709',
   '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-movflags', '+faststart', out], { stdio: 'inherit' });

@@ -245,7 +245,7 @@ canvas,svg.full{position:absolute;left:0;top:0;width:1920px;height:1080px}
     <div id="url" class="abs c url hide" style="top:790px">getlegion.xyz  ·  0.2.5 BETA</div>
     <svg id="sig" class="abs hide" style="left:925px;top:836px;overflow:visible" width="70" height="84" viewBox="0 0 70 84"><g fill="none" stroke="#caa64a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 8px rgba(202,166,74,.55))">
       <path d="M35,4V80"/><path d="M19,28H51"/><path d="M3,19L12,28L3,37"/><path d="M67,19L58,28L67,37"/></g></svg>
-    <div id="print" class="abs c print hide" style="top:968px">Runs on your own Claude subscription via the official Agent SDK.  ·  github.com/dnh33/legion</div>
+    <div id="print" class="abs c print hide" style="top:968px">macOS and Linux: curl -fsSL https://getlegion.xyz | sh  ·  0.2.5 BETA  ·  Runs on your own Claude subscription.</div>
   </div>
 
   <canvas id="cC" width="1920" height="1080"></canvas>
@@ -702,6 +702,7 @@ window.render = function (t) {
       sweep: eo(ramp(t, b(2, 2.6), b(3, 1))),
       t0: b(2, 2.6),
       tagK: 1,
+      band: dawnOn ? 0 : win(t, ...T.awaken.sub),
       dim: dawnOn ? keys(t, [[VC.at, .2], [VC.at + 1, .42], [EN.wmDraw[0], .58]]) : keys(t, [[b(4) - .2, 0], [b(4) + .6, .5], [MU.roster - .2, .5], [MU.roster + .5, .64]]),
       bolts: T.field.bolts,
     };
@@ -850,6 +851,7 @@ await document.fonts.load('600 20px "JetBrains Mono"');
 await Promise.all([...document.images].map((i) => i.decode().catch(() => {})));
 window.render(0);
 await document.fonts.load('600 16px "JetBrains Mono"'); await document.fonts.ready;
+if (T.install?.live) { const u = $('url'); u.textContent = T.install.line; u.style.fontFamily = 'var(--mono, "JetBrains Mono"), monospace'; }
 window.__ready = true;
 </script>
 </body>

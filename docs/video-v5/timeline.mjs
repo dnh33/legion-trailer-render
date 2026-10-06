@@ -33,10 +33,10 @@ const SPEC = [
   { id: 'c1', patron: 'inquisitor', state: 'awaiting', kicker: 'The Inquisitor · Approvals', title: 'You hold the seal', line: 'Risky calls await your word.', bars: [1, 2],
     screens: [{ img: 'c1-approval.png', cam: [1.9, .47, .52], calls: [['Allow or deny', .25, .629], ['Press A or D', .274, .629]] }] },
   { id: 'c2', patron: 'scout', state: 'thinking', kicker: 'The Scout · Chat', title: 'Talk to it mid-run', line: 'Steer it while it works.', bars: [1, 2.5],
-    screens: [{ img: 'c2-steer.png', cam: [1.6, .47, .66], calls: [['Joins the running task', .53, .496], ['Live run status', .30, .545]], beat: { img: 'c2-palette.png', at: 1.5, cam: [1.6, .5, .34] } }] },
+    screens: [{ img: 'c2-steer.png', cam: [1.6, .47, .66], calls: [['Joins the running task', .53, .496], ['Live run status', .235, .545]], beat: { img: 'c2-palette.png', at: 1.5, cam: [1.6, .5, .34] } }] },
   { id: 'c3', patron: 'preceptor', state: 'idle', kicker: 'The Preceptor · Models', title: 'Any model, at your word', line: 'Claude first. OpenRouter beside it.', bars: [1, 2, 2],
     screens: [{ img: 'c3-models.png', cam: [1.55, .36, .62], calls: [['Auto: Sonnet or Opus', .245, .505], ['OpenRouter, any model', .30, .707]] },
-              { img: 'c3-takeover.png', cam: [2.0, .45, .32], calls: [['Sonnet stops, Opus finishes', .32, .359], ['In the same conversation', .25, .423]] }] },
+              { img: 'c3-takeover.png', cam: [2.0, .5, .34], calls: [['Sonnet stops, Opus finishes', .32, .359], ['In the same conversation', .60, .359]] }] },
   { id: 'c4', patron: 'herald', state: 'idle', kicker: 'The Herald · Rooms', title: 'The order confers', line: 'Rooms of bots, and you.', bars: [1, 2],
     screens: [{ img: 'c4-room.png', cam: [1.5, .55, .45], calls: [['Every hop counted', .575, .153], ['Handoffs by name', .47, .39]] }] },
   { id: 'c5', patron: 'archivist', state: 'thinking', kicker: 'The Archivist · Library', title: 'A Library that remembers', line: 'Shared memory, in one graph.', bars: [1, 2, 2],
@@ -46,14 +46,14 @@ const SPEC = [
     screens: [{ img: 'c6-board.png', cam: [1.7, .58, .42], from: [1.45, .58, .38], calls: [['Not reviewed until you look', .38, .596], ['Only you mark Done', .69, .426]] },
               { img: 'c6-delete.png', cam: [1.55, .55, .57], from: [1.5, .55, .58], calls: [['Deletes wait for you', .361, .524]] }] },
   { id: 'c7', patron: 'exorcist', state: 'awaiting', kicker: 'The Exorcist · Doctrine', title: 'A doctrine they follow', line: 'Rules and skills, your switch.', bars: [1, 2],
-    screens: [{ img: 'c7-doctrine.png', cam: [1.45, .55, .62], calls: [['Core tenets, always on', .36, .349], ['Six skills, off until you choose', .355, .629]] }] },
+    screens: [{ img: 'c7-doctrine.png', cam: [1.8, .58, .55], calls: [['Core tenets, always on', .36, .349], ['Six skills, off until you choose', .355, .629]] }] },
   { id: 'c8', patron: 'scribe', state: 'thinking', kicker: 'The Scribe · Long sessions', title: 'Long runs keep their decisions', line: 'Compacted, not truncated.', bars: [1, 2],
-    screens: [{ img: 'c8-compact.png', cam: [1.9, .47, .33], calls: [['Says when, and how much', .514, .359]] }] },
+    screens: [{ img: 'c8-compact.png', cam: [1.9, .47, .35], calls: [['Says when, and how much', .514, .359]] }] },
   { id: 'c9', patron: 'builder', state: 'hacking', kicker: 'The Builder · Computers', title: 'A forge-machine for every agent', line: 'A cloud VM, on demand.', bars: [1, 2, 1.5],
     screens: [{ img: 'c9-computer.png', cam: [2.2, .77, .55], calls: [['Its own cloud VM', .88, .464], ['Stops when idle', .94, .72]] },
               { img: 'c9-browser.png', cam: [1.5, .55, .60], calls: [['Or browse from this PC', .40, .648]] }] },
-  { id: 'c10', patron: 'assayer', state: 'awaiting', forge: 'chain', pulses: [0.3, 1.0, 1.7], kicker: 'The Assayer · BSV', title: 'Native BitcoinSV development', line: 'Keys stay in your wallet. Every spend needs your seal.', bars: [2.5, 2, 2],
-    screens: [{ img: 'c10-status.png', cam: [2.3, .5, .22], from: [2.2, .5, .227], calls: [['A testing preview, testnet first', .33, .119], ['No keys inside Legion', .46, .231]] },
+  { id: 'c10', patron: 'assayer', state: 'awaiting', forge: 'chain', pulses: [0.3, 1.0, 1.7], kicker: 'The Assayer · BSV preview', title: 'Native BitcoinSV development', line: 'Keys stay in your wallet. Every spend needs your seal.', bars: [2.5, 2, 2],
+    screens: [{ img: 'c10-status.png', cam: [2.1, .5, .76], from: [2.05, .5, .76], calls: [['163 notes, built in', .33, .735]] },
               { img: 'c10-arm.png', cam: [1.9, .5, .38], from: [1.75, .5, .36], calls: [['Mainnet off by default', .40, .378], ['Armed for one spend', .35, .525]] }] },
   { id: 'c11', patron: 'sculptor', state: 'idle', forge: 'mesh', kicker: 'The Sculptor · Blender', title: 'Blender, built in', line: 'Sculpt and render on your PC, or in a VM.', bars: [2, 2],
     screens: [{ img: 'c11-blender.png', cam: [1.8, .47, .58], calls: [['You choose where it runs', .40, .446], ['The whole script, every time', .45, .65]] }] },
@@ -113,7 +113,8 @@ export const T = {
   muster: { banners: [b(4), b(4, 1), b(4, 2)], caption: [b(4, 2.2), b(4, 3), b(5, 3.8), b(6, .5)],
     // v1's roll call, 1:1 (owner: Act I and Act III keep the first trailer's pace; only the features slow down)
     roster: b(6), rosterStep: BEAT / 4, caption2: [b(6, 3), b(7), b(7, 3.6), b(8, .3)], gridOut: [b(7, 3), b(8, .2)], end: b(8) },
-  field: { bolts: [[b(2, .35), 1460, 12, .85], [b(2, 2) - .03, 760, 13, 1]] },   // v5: lightning on the field (picture + thunder)
+  install: { live: true, line: 'irm https://getlegion.xyz | iex' },    // the Windows one-liner (macOS/Linux: curl -fsSL https://getlegion.xyz | sh), live on getlegion.xyz
+  field: { bolts: [[b(2, 1), 1460, 12, .85], [b(2, 2) - .03, 760, 13, 1]] },   // v5: lightning on the field (picture + thunder)
   vox: { term: [b(V), b(V + 4)], title: [b(V), b(V, 1)], chips: b(V, 3), sealed: b(V + 3, 2), end: b(V + 4) },
   victory: { at: b(V + 4), text: [b(V + 4, 1), b(V + 4, 1.8), b(V + 5, .6), b(V + 5, 1.2)], flash: [b(V + 4), b(V + 4) + .3], end: b(V + 5) },
   end: { wmDraw: [b(V + 5, 1.25), b(V + 5, 3.75)], wmFill: [b(V + 6), b(V + 6, 1.4)], tag: b(V + 6, 1.5), url: b(V + 6, 2.5), print: b(V + 6, 3.3), sigil: b(V + 7), fadeOut: [b(V + 7, 2.5), b(V + 8)] },   // v1's end card, 1:1
@@ -121,9 +122,12 @@ export const T = {
   relic: [
     [0, 960, 400, 600, 0], [b(1, 3.6), 960, 400, 600, 0], [b(2, 2), 960, 400, 600, 1], [b(3, 3.6), 960, 400, 600, 1],
     [b(4, 1.6), 1555, 470, 560, 1], [b(6), 1555, 470, 560, 1],
-    [b(6, 1.2), 'slot', 'slot', 'slot', 1], [b(7, 2), 'slot', 'slot', 'slot', 1],     // into Zealot's place in the grid, and out again
-    [b(7, 3.6), CARD_BUST.cx, CARD_BUST.cy, CARD_BUST.h, 1], [CH[0].cardOut - .25, CARD_BUST.cx, CARD_BUST.cy, CARD_BUST.h, 1],   // v5: Zealot is its own chapter's patron
-    [CH[0].cardOut + .55, RH.cx, RH.cy, RH.h, 1], [b(V + 4), RH.cx, RH.cy, RH.h, 1],
+    [b(6, 1.2), 'slot', 'slot', 'slot', 1], [b(7, 2), 'slot', 'slot', 'slot', 1],     // into Zealot's place in the grid
+    // v5: Zealot is its own chapter's patron. It never walks across the grid or the card's line: it fades out of the slot,
+    // in on the card, out on the cut to the screen, and in at its Act II home.
+    [b(7, 2.8), 'slot', 'slot', 'slot', 0], [b(7, 2.81), CARD_BUST.cx, CARD_BUST.cy, CARD_BUST.h, 0], [b(8, .3), CARD_BUST.cx, CARD_BUST.cy, CARD_BUST.h, 1],
+    [CH[0].cardOut - .3, CARD_BUST.cx, CARD_BUST.cy, CARD_BUST.h, 1], [CH[0].cardOut - .02, CARD_BUST.cx, CARD_BUST.cy, CARD_BUST.h, 0],
+    [CH[0].cardOut - .01, RH.cx, RH.cy, RH.h, 0], [CH[0].cardOut + .45, RH.cx, RH.cy, RH.h, 1], [b(V + 4), RH.cx, RH.cy, RH.h, 1],
     [b(V + 4, 1.6), 960, 400, 640, 1], [b(V + 5), 960, 400, 640, 1], [b(V + 5, 3), 960, 250, 420, 1], [999, 960, 250, 420, 1],
   ],
   states: [[0, 'sleeping'], [b(2, 2), 'idle'], [b(4), 'thinking'], [b(6, 1.2), 'idle'],

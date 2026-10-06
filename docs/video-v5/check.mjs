@@ -37,7 +37,7 @@ for (const c of CH) {
 v1('Command the whole order from Claude Code or Cowork.', T.vox.title[1], T.vox.term[1]);
 v1('The work is done.', V.text[1], V.text[2]);
 v1('Local. Claude-native. Open source.', E.tag + .7, E.fadeOut[0]);
-v1('getlegion.xyz · 0.2.5 BETA', E.url + .7, E.fadeOut[0]);
+v1('irm https://getlegion.xyz | iex', E.url + .7, E.fadeOut[0]);
 // the fine print keeps v1's end-card timing (v1 did not hold it to the reading rule either)
 for (const c of CUTS) { const beats = c.at / BEAT; check(Math.abs(beats - Math.round(beats)) < 1e-6, `cut ${c.id} at ${c.at}s (beat ${beats.toFixed(2)})`); }
 const sealed = LOG[LOG.length - 1].a + LOG[LOG.length - 1].d;

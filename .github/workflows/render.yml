@@ -12,7 +12,7 @@ name: Render trailer
 on:
   push:
     branches: [main]
-    paths: [render.json, .github/workflows/render.yml]
+    paths: [render.json, .github/workflows/render.yml, "docs/**", "ui/**"]
   workflow_dispatch:
     inputs:
       trailer:

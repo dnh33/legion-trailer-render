@@ -25,8 +25,8 @@ const SMOKE = Array.from({ length: 70 }, () => ({ f: Math.floor(R() * 6), off: R
 // the backlog: depth z in [0 near .. 1 far], x across the right two thirds
 const HORDE = Array.from({ length: 460 }, () => ({ x: 760 + R() * 1360, z: Math.pow(R(), .8), ph: R() * 6.28, s: .75 + R() * .5, eye: R() < .82 }));
 HORDE.sort((a, b) => b.z - a.z);
-const TAGS = ['#4127 flaky test', 'FIXME', 'regression', '#3988', 'merge conflict', 'p0: login loop', 'tech debt', 'deadline', '#4410 timeout',
-  'red CI', 'stale branch', 'TODO', 'out of memory', '#4002 null', 'docs missing', 'broken build', 'race condition', 'scope creep', '#4361', 'hotfix?', 'cache miss', 'flaky e2e']
+const TAGS = ['#4127 flaky test', 'fix later', 'regression', '#3988', 'merge conflict', 'p0: login loop', 'tech debt', 'deadline', '#4410 timeout',
+  'red CI', 'stale branch', 'left for later', 'out of memory', '#4002 null', 'docs missing', 'broken build', 'race condition', 'scope creep', '#4361', 'hotfix?', 'cache miss', 'flaky e2e']
   .map((text, i) => ({ text, x: 820 + R() * 1060, z: .15 + R() * .8, ph: R() * 6.28, flip: i % 3 === 0 ? 7.6 + R() * 2 : Infinity }));
 TAGS.sort((a, b) => b.z - a.z);
 // our line: twelve knights (the Relic is the thirteenth, in the sky); names and colours from the roster
@@ -173,6 +173,7 @@ function tags(c, t, P) {
     const size = Math.round(lerp(12, 26, s));
     c.font = `600 ${size}px "JetBrains Mono", ui-monospace, monospace`;
     const txt = fl > .5 ? `✓ ${g.text}` : g.text, w = c.measureText(txt).width;
+    if (x + w + 24 > W) continue;                                       // never cut by the frame edge
     const col = fl > .5 ? [124, 255, 178] : [255, 84, 72];
     c.fillStyle = rgba(10, 4, 4, a * .55); c.fillRect(x - 8, y - size * .75, w + 16, size * 1.5);
     c.strokeStyle = rgba(...col, a * .7); c.lineWidth = 1; c.strokeRect(x - 8 + .5, y - size * .75 + .5, w + 15, size * 1.5 - 1);
@@ -241,7 +242,7 @@ function overlay(c, t, P, heads, relic) {
     c.moveTo(L, B - cl); c.lineTo(L, B); c.lineTo(L + cl, B); c.moveTo(Rr - cl, B); c.lineTo(Rr, B); c.lineTo(Rr, B - cl);
     c.stroke();
     // name tag: on alternating rows above the helms so the twelve names never collide
-    const ty = T - 10 - (hd.lvl ?? 0) * 18;
+    const ty = T + 24 + (hd.lvl ?? 0) * 16;                               // inside the bracket, below the subtitle band
     c.fillStyle = rgba(124, 255, 178, .95 * a); c.textAlign = hd.flank < 0 ? 'right' : 'left'; c.fillText(hd.name.toUpperCase(), hd.flank < 0 ? Rr : L, ty); c.textAlign = 'left';   // names point away from the centre (the subtitle)
     // the order: a beam from the Relic to the helm, drawn on, then a travelling pulse
     const b = eo(ramp(t, P.t0 + .3 + i * .09, P.t0 + .9 + i * .09)); if (b <= 0) return;
@@ -317,6 +318,12 @@ export function drawField(c, t, P, roster, relic) {
     tags(c, t, P);
     const heads = KN.map((k) => ({ ...knight(c, k, t, P, P.wake), name: k.name, lvl: k.lvl, flank: k.flank }));
     overlay(c, t, P, heads, relic);
+    // a soft dark band under the subtitle so it never fights the field (only while it shows)
+    if (P.band > 0) {
+      const bg = c.createRadialGradient(960, 800, 20, 960, 800, 620);
+      bg.addColorStop(0, rgba(2, 3, 4, .62 * P.band)); bg.addColorStop(1, rgba(2, 3, 4, 0));
+      c.save(); c.translate(960, 800); c.scale(1, .22); c.translate(-960, -800); c.fillStyle = bg; c.fillRect(300, 0, 1320, 1600); c.restore();
+    }
     // the Relic's green on the field once it is awake
     if (P.wake > 0) {
       c.globalCompositeOperation = 'lighter';
