@@ -52,7 +52,7 @@ const SPEC = [
   { id: 'c9', patron: 'builder', state: 'hacking', kicker: 'The Builder · Computers', title: 'A forge-machine for every agent', line: 'A cloud VM, on demand.', bars: [1, 2, 1.5],
     screens: [{ img: 'c9-computer.png', cam: [2.2, .77, .55], calls: [['Its own cloud VM', .88, .464], ['Stops when idle', .94, .72]] },
               { img: 'c9-browser.png', cam: [1.5, .55, .60], calls: [['Or browse from this PC', .40, .648]] }] },
-  { id: 'c10', patron: 'assayer', state: 'awaiting', forge: 'chain', pulses: [0.3, 1.0, 1.7], kicker: 'The Assayer · BSV preview', title: 'Native BitcoinSV development', line: 'Keys stay in your wallet. Every spend needs your seal.', bars: [2.5, 2, 2],
+  { id: 'c10', patron: 'assayer', state: 'awaiting', forge: 'chain', pulses: [0.25, 1, 1.75], kicker: 'The Assayer · BSV preview', title: 'Native BitcoinSV development', line: 'Keys stay in your wallet. Every spend needs your seal.', bars: [2.5, 2, 2],
     screens: [{ img: 'c10-status.png', cam: [2.25, .5, .78], from: [2.25, .5, .78], calls: [['163 notes, built in', .33, .735]] },
               { img: 'c10-arm.png', cam: [1.9, .5, .38], from: [1.75, .5, .36], calls: [['Mainnet off by default', .40, .378], ['Armed for one spend', .35, .525]] }] },
   { id: 'c11', patron: 'sculptor', state: 'idle', forge: 'mesh', kicker: 'The Sculptor · Blender', title: 'Blender, built in', line: 'Sculpt and render on your PC, or in a VM.', bars: [2, 2],
@@ -86,7 +86,7 @@ export const CUTS = [
     ...c.screens.map((s, si) => ({ id: `${c.id}:${si ? 'screen' + si : 'card'}>screen${si + 1}`, at: s.in, kind: 'hard' })),
     ...c.screens.filter((s) => s.beat).flatMap((s) => [{ id: `${c.id}:beat-in`, at: s.in + b(0, 4 * s.beat.at), kind: 'hard' }]),
   ]),
-  { id: 'c12>vox', at: b(ACT2_END), kind: 'dissolve' },
+  { id: 'c12>vox', at: b(ACT2_END), kind: 'hard' },
   { id: 'vox>victory', at: b(ACT2_END + 4), kind: 'hard' },
   { id: 'victory>end', at: b(ACT2_END + 5), kind: 'match' },
 ];
@@ -108,7 +108,7 @@ const SLOT0 = { cx: 0, cy: 0 };                             // filled in by trai
 
 export const T = {
   dur: b(V + 8),                                                  // 64 bars, 160 s
-  cold: { candleIn: [0, .9], l1: [b(0, 1.5), b(0, 2.6), b(2), b(2, .8)], l2: [b(1), b(1, 1), b(2), b(2, .8)], candleOut: [b(1, 3.4), b(2, .8)], end: b(2) },
+  cold: { candleIn: [0, .9], l1: [b(0, 1.5), b(0, 2.6), b(2), b(2, .8)], l2: [b(1), b(1, 1), b(2), b(2, .8)], candleOut: [b(1, 3.2), b(1, 3.9)], end: b(2) },
   awaken: { arch: [b(1, 3.2), b(2, 2.4)], wake: b(2, 2), sub: [b(2, 2.6), b(2, 3.4), b(3, 3.8), b(4, .5)], end: b(4) },
   muster: { banners: [b(4), b(4, 1), b(4, 2)], caption: [b(4, 2.2), b(4, 3), b(5, 3.8), b(6, .5)],
     // v1's roll call, 1:1 (owner: Act I and Act III keep the first trailer's pace; only the features slow down)
@@ -120,7 +120,7 @@ export const T = {
   end: { wmDraw: [b(V + 5, 1.25), b(V + 5, 3.75)], wmFill: [b(V + 6), b(V + 6, 1.4)], tag: b(V + 6, 1.5), url: b(V + 6, 2.5), print: b(V + 6, 3.3), sigil: b(V + 7), fadeOut: [b(V + 7, 2.5), b(V + 8)] },   // v1's end card, 1:1
   // the Relic: t, cx, cy, h, opacity. Homes: centre (awakening), banner right, the lead slot (roll call), Act II home, centre-high (end)
   relic: [
-    [0, 960, 400, 600, 0], [b(1, 3.6), 960, 400, 600, 0], [b(2, 2), 960, 400, 600, 1], [b(3, 3.6), 960, 400, 600, 1],
+    [0, 960, 400, 600, 0], [b(2, .96), 960, 400, 600, 0], [b(2, 1.6), 960, 400, 600, 1], [b(2, 2), 960, 400, 600, 1], [b(3, 3.6), 960, 400, 600, 1],   // seat CANVAS: dark through the burning-map dive, revealed by the first bolt (5.63 s), full by 6.0, wakes at 6.25
     [b(4, 1.6), 1555, 470, 560, 1], [b(6), 1555, 470, 560, 1],
     [b(6, 1.2), 'slot', 'slot', 'slot', 1], [b(7, 2), 'slot', 'slot', 'slot', 1],     // into Zealot's place in the grid
     // v5: Zealot is its own chapter's patron. It never walks across the grid or the card's line: it fades out of the slot,
@@ -160,7 +160,7 @@ export function cues() {
     c.screens.forEach((s, si) => {
       e(s.in, 'push', { id: c.id, n: si + 1 });
       if (s.beat) e(s.in + s.beat.at * BAR, 'swap', { id: c.id });
-      s.calls.forEach((k, ki) => e(s.in + 0.55 + ki * 0.9, 'callout', { id: c.id, n: ki + 1 }));
+      s.calls.forEach((k, ki) => e(s.in + BEAT + ki * 1.5 * BEAT, 'callout', { id: c.id, n: ki + 1 }));
     });
   });
   T.field.bolts.forEach(([t0], i) => e(t0, 'bolt', { n: i + 1 }));

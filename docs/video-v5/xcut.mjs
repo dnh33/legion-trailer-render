@@ -2,7 +2,7 @@
 // The one-minute X cut, edited from the full film (no re-render):  node docs/video-v5/xcut.mjs [in.mp4] [out.mp4]
 // Every segment starts and ends on the beat grid, and chapter segments start at c.in and end at a chapter or
 // screen boundary, where the full film is already on the dark arch or on a hard cut, so every join is clean.
-// Audio joins get a 60 ms crossfade so nothing clicks; the last beat before the hit dips, as in the full film.
+// Audio joins are real 30 ms equal-power crossfades (r5); the hit's audio starts at b(66) exactly; the last beat before the hit dips, as in the full film.
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -24,23 +24,40 @@ const SEG = [
 const total = SEG.reduce((n, [a, z]) => n + (z - a), 0);
 if (total > 24) throw new Error(`X cut is ${total} bars, over 60 s`);   // whole chapters only: 23.5 bars = 58.75 s
 
-const XF = 0.06, FADE = 0, dur = total * BAR;   // the film's own end fade is inside the last segment
-const v = [], a = [];
-SEG.forEach(([s, e], i) => {
-  const t0 = b(s) + (s === 66 ? 1 / FPS : 0), t1 = b(e) - .5 / FPS, d = t1 - t0;   // end half a frame early: a cut on the bar line belongs to the next shot
-  v.push(`[${i}:v]setpts=PTS-STARTPTS[v${i}]`);   // one seeked input per segment (trim on one input buffered the whole film)
-  let af = `[${i}:a]asetpts=PTS-STARTPTS`;
-  if (i > 0) af += `,afade=t=in:st=0:d=${XF}`;
-  if (i < SEG.length - 1) af += `,afade=t=out:st=${(d - XF).toFixed(4)}:d=${XF}`;
-  if (SEG[i + 1] && SEG[i + 1][0] === 66) af += `,afade=t=out:st=${(d - BEAT).toFixed(4)}:d=${(BEAT * .4).toFixed(4)}`;   // one beat of near-silence before the hit, as in the film
-  a.push(af + `[a${i}]`);
+// r5 (council, seat SYNC + MIX): audio gets its own inputs. The victory segment's audio starts at b(66) exactly (the hit's
+// attack is never trimmed or faded in); joins are real 30 ms equal-power crossfades taken from pre-roll of the incoming segment, so the
+// downbeat after a join plays at full level and the length is unchanged (r4: 60 ms out + 60 ms in = a 120 ms dip to about -45 dBFS).
+// No loudnorm: score.py now masters to -14 LUFS / -2.3 dBTP, and the cut inherits it.
+const XF = 0.03, dur = total * BAR;   // the film's own end fade is inside the last segment
+const vspan = ([s0, e0]) => { const t0 = b(s0) + (s0 === 66 ? 1 / FPS : 0); return [t0, b(e0) - .5 / FPS]; };   // end half a frame early: a cut on the bar line belongs to the next shot
+const vIn = SEG.flatMap((sg) => { const [t0, t1] = vspan(sg); return ['-ss', t0.toFixed(4), '-t', (t1 - t0).toFixed(4), '-i', src]; });
+// Each video segment shows ceil(span * FPS) whole frames, so each audio segment is exactly that long: no A/V drift across joins.
+const nf = (sg) => { const [t0, t1] = vspan(sg); return Math.ceil((t1 - t0) * FPS - 1e-6); };
+const aIn = SEG.flatMap((sg, i) => {
+  const [vt0] = vspan(sg);
+  const a0 = sg[0] === 66 ? bt(66) : vt0;          // the hit's audio from b(66) exactly, landing on the first victory frame
+  const pre = i > 0 ? XF : 0;                      // pre-roll eaten by the crossfade
+  return ['-ss', (a0 - pre).toFixed(4), '-t', (nf(sg) / FPS + pre).toFixed(4), '-i', src];
 });
 const n = SEG.length;
-const fc = [...v, ...a,
+const v = SEG.map((_, i) => `[${i}:v]setpts=PTS-STARTPTS[v${i}]`);   // one seeked input per segment (trim on one input buffered the whole film)
+const a = SEG.map((sg, i) => {
+  let af = `[${n + i}:a]asetpts=PTS-STARTPTS`;
+  if (SEG[i + 1] && SEG[i + 1][0] === 66) {   // one beat of near-silence before the hit, as in the film (the X cut jumps into it)
+    const d = nf(sg) / FPS + (i > 0 ? XF : 0);
+    af += `,afade=t=out:st=${(d - BEAT).toFixed(4)}:d=${(BEAT * .4).toFixed(4)}`;
+  }
+  return af + `[a${i}]`;
+});
+const xf = [];
+let last = 'a0';
+for (let i = 1; i < n; i++) { const o = i === n - 1 ? 'ac' : `x${i}`; xf.push(`[${last}][a${i}]acrossfade=d=${XF}:c1=qsin:c2=qsin[${o}]`); last = o; }
+const vdur = SEG.reduce((s, sg) => s + nf(sg) / FPS, 0);
+const fc = [...v, ...a, ...xf,
   `${SEG.map((_, i) => `[v${i}]`).join('')}concat=n=${n}:v=1:a=0[vo]`,
-  `${SEG.map((_, i) => `[a${i}]`).join('')}concat=n=${n}:v=0:a=1,loudnorm=I=-14:TP=-1.5:LRA=11[ao]`,
+  `[ac]atrim=0:${vdur.toFixed(4)},asetpts=PTS-STARTPTS[ao]`,
 ].join(';');
-const r = spawnSync('ffmpeg', ['-y', '-hide_banner', '-loglevel', 'error', ...SEG.flatMap(([s0, e0]) => { const t0 = b(s0) + (s0 === 66 ? 1 / FPS : 0); return ['-ss', t0.toFixed(4), '-t', (b(e0) - .5 / FPS - t0).toFixed(4), '-i', src]; }), '-filter_complex', fc, '-map', '[vo]', '-map', '[ao]',
+const r = spawnSync('ffmpeg', ['-y', '-hide_banner', '-loglevel', 'error', ...vIn, ...aIn, '-filter_complex', fc, '-map', '[vo]', '-map', '[ao]',
   '-c:v', 'libx264', '-preset', 'slow', '-crf', '19', '-maxrate', '5000k', '-bufsize', '10000k', '-pix_fmt', 'yuv420p', '-profile:v', 'high',
   '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709',
   '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-movflags', '+faststart', out], { stdio: 'inherit' });

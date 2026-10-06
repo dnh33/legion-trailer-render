@@ -122,7 +122,7 @@ function muxScore(mp4) {
   if (py.status !== 0) { console.warn('score.py failed; leaving the MP4 silent'); return; }
   const tmp = mp4.replace(/\.mp4$/, '.withaudio.mp4');
   ff(['-i', mp4, '-i', path.join(HERE, 'score.wav'), '-map', '0:v', '-map', '1:a', '-c:v', 'copy',
-    '-af', 'loudnorm=I=-14:TP=-1.5:LRA=11', '-ar', '48000', '-c:a', 'aac', '-b:a', '192k', '-shortest', '-movflags', '+faststart', tmp]);
+    '-ar', '48000', '-c:a', 'aac', '-b:a', '192k', '-shortest', '-movflags', '+faststart', tmp]);
   fs.renameSync(tmp, mp4);
 }
 
@@ -189,7 +189,7 @@ try {
     spawnSync('python3', [path.join(HERE, 'score.py')], { stdio: 'inherit' });
     const out = path.join(HERE, 'legion-v5-preview.mp4');
     ff(['-framerate', String(PF), '-i', path.join(dir, 'p%05d.jpg'), '-i', path.join(HERE, 'score.wav'), '-map', '0:v', '-map', '1:a', '-c:v', 'libx264', '-crf', '26', '-pix_fmt', 'yuv420p',
-      '-af', 'loudnorm=I=-14:TP=-1.5:LRA=11', '-c:a', 'aac', '-b:a', '160k', '-shortest', '-movflags', '+faststart', out]);
+      '-c:a', 'aac', '-b:a', '160k', '-shortest', '-movflags', '+faststart', out]);
     console.log(path.relative(ROOT, out), (fs.statSync(out).size / 1e6).toFixed(2) + ' MB');
   } else if (args.find((a) => a.startsWith('--shard='))) {
     // CI: render frames [K*F/N, (K+1)*F/N) of the full film into <tmp>/frames (see .github/workflows/trailer.yml)

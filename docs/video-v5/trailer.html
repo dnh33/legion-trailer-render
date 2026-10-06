@@ -104,6 +104,9 @@ canvas,svg.full{position:absolute;left:0;top:0;width:1920px;height:1080px}
 /* v4: the roll call grid, chapter cards, the screen frame, callout column */
 .bust{position:absolute;width:200px;height:200px;filter:drop-shadow(0 10px 18px rgba(0,0,0,.75))}
 .bust .mx{width:100%;height:100%}
+.fchip{position:absolute;width:76px;height:76px;filter:drop-shadow(0 4px 8px rgba(0,0,0,.8))}
+.fchip .mx{width:100%;height:100%}
+.fchipn{position:absolute;font:700 12px var(--mono);letter-spacing:.08em;color:#9dffc9;background:rgba(4,10,8,.62);padding:1px 6px;border-radius:2px;text-shadow:0 0 8px rgba(124,255,178,.45),0 1px 2px #000;white-space:nowrap;transform:translateX(-50%)}
 .gpl{position:absolute;width:224px;height:84px;box-sizing:border-box;padding:12px 16px 0 22px;background:linear-gradient(180deg,rgba(18,22,27,.94),rgba(9,11,14,.94));
   border:1px solid rgba(202,166,74,.38);box-shadow:0 14px 34px rgba(0,0,0,.6)}
 .gpl i{position:absolute;left:0;top:0;bottom:0;width:6px}
@@ -183,6 +186,7 @@ canvas,svg.full{position:absolute;left:0;top:0;width:1920px;height:1080px}
 
   <canvas id="cB" width="1920" height="1080"></canvas>
   <canvas id="cF" width="1920" height="1080"></canvas>   <!-- v5: the war table, the field, the field at dawn (field.js) -->
+  <div id="fchips" class="abs" style="left:0;top:0;width:1920px;height:1080px;pointer-events:none"></div>   <!-- the agents' own busts on their units (command overlay) -->
 
   <div id="chapter" class="abs c hide"><i></i><span id="chapterT"></span><i></i></div>
 
@@ -259,7 +263,7 @@ canvas,svg.full{position:absolute;left:0;top:0;width:1920px;height:1080px}
 
 <script type="module">
 import { createMascot } from '../../ui/src/mascot/engine.js';
-import { T, LOG, FPS, CUTS, TRANSITION, ROSTER, CH, BAR, RH, b } from './timeline.mjs';
+import { T, LOG, FPS, CUTS, TRANSITION, ROSTER, CH, BAR, RH, b, BEAT } from './timeline.mjs';
 import { drawField } from './field.js';
 
 const W = 1920, H = 1080;
@@ -379,6 +383,17 @@ for (let i = 0; i < ROSTER.length; i++) {
   gridEls.push({ pl, host, m, ph: i * 613 });
 }
 
+/* ---------- the command overlay: each knight unit carries its agents' own painted busts (used, never repainted) ---------- */
+const FOUT = {};
+const FCHIP = {};
+for (let i = 1; i < ROSTER.length; i++) {
+  const [id, name] = ROSTER[i];
+  const host = document.createElement('div'); host.className = 'fchip hide'; $('fchips').appendChild(host);
+  const nm = document.createElement('div'); nm.className = 'fchipn hide'; nm.textContent = name.toUpperCase(); $('fchips').appendChild(nm);
+  const m = await mkMascot(host, id, { railCrop: true });
+  m.setState('hacking');
+  FCHIP[name.toUpperCase()] = { host, nm, m, ph: i * 701 };
+}
 /* ---------- Act II: one card + one header + screens + labels per chapter ---------- */
 const AC = (s) => s.replace(/\b(PC|VM|BSV|MCP)\b/g, '<span class="ac">$1</span>');
 const CHEL = [];
@@ -685,15 +700,17 @@ window.render = function (t) {
   // --- v5: the war table and the battlefield (Act I), the field at dawn (the finale) ---
   {
     const MU = T.muster, VC = T.victory, EN = T.end;
-    const dive = eo(ramp(t, b(1, 3.4), b(2, .8)));
+    // seat CANVAS: an ember leaves the candle (b(1,2.5)), lights the map at the cathedral miniature (b(1,3.15) ~4.47 s), the parchment
+    // burns open and the camera falls through it onto the field (b(1,3.2)..b(2,.75)); the field sits under the table from then on
+    const dive = ramp(t, b(1, 3.2), b(2, .75));
     const dawnOn = t >= VC.at - .02 ? 1 : 0;
     const P = {
-      table: ramp(t, .2, 1.6) * (1 - ramp(t, b(1, 3.7), b(2, .8))),
-      dive,
-      field: Math.max(sm(ramp(t, b(1, 3.6), b(2, .6))) * (1 - sm(ramp(t, ...MU.gridOut))), dawnOn * (1 - sm(ramp(t, ...EN.fadeOut)))),
-      zoom: dawnOn ? 1.02 + .02 * ramp(t, VC.at, EN.fadeOut[1]) : 1.1 - .1 * eo(ramp(t, b(1, 3.6), b(2, 2.2))) + .04 * ramp(t, b(2, 2.2), b(8)),
+      table: t < b(2, .8) ? ramp(t, .2, 1.6) : 0,
+      dive, ember: ramp(t, b(1, 2.5), b(1, 3.15)), ignite: b(1, 3.15),
+      field: Math.max((t >= b(1, 3.15) ? 1 : 0) * (1 - sm(ramp(t, ...MU.gridOut))), dawnOn * (1 - sm(ramp(t, ...EN.fadeOut)))),
+      zoom: dawnOn ? 1.02 + .02 * ramp(t, VC.at, EN.fadeOut[1]) : 1 + .05 * eo(ramp(t, b(1, 3.2), b(2, 3))) + .03 * ramp(t, b(2, 3), b(8)),
       drift: dawnOn ? 0 : -24 * ramp(t, b(1, 3.6), b(8)),
-      dawn: dawnOn,
+      dawn: dawnOn, dawnT: VC.at,
       wake: dawnOn ? 1 : sm(ramp(t, b(2, 2), b(2, 2) + .6)),
       advance: dawnOn ? 0 : ramp(t, b(1, 3.6), b(2, 2)),
       push: dawnOn ? 1 : eo(ramp(t, b(3), b(5))),
@@ -701,12 +718,31 @@ window.render = function (t) {
       overlay: dawnOn ? 0 : ramp(t, b(2, 2.6), b(2, 2.9)) * (1 - ramp(t, b(4) - .3, b(4) + .3)),
       sweep: eo(ramp(t, b(2, 2.6), b(3, 1))),
       t0: b(2, 2.6),
-      tagK: 1,
+      strike0: b(2, 3.6) - .1, strikeStep: .33, strikeDur: .48,      // five orders land 7.63 .. 8.95 s
+      tagK: dawnOn ? 0 : 1 - sm(ramp(t, b(4) - .2, b(4) + .8)),   // the tags leave with the overlay, before the muster banners
       band: dawnOn ? 0 : win(t, ...T.awaken.sub),
       dim: dawnOn ? keys(t, [[VC.at, .2], [VC.at + 1, .42], [EN.wmDraw[0], .58]]) : keys(t, [[b(4) - .2, 0], [b(4) + .6, .5], [MU.roster - .2, .5], [MU.roster + .5, .64]]),
       bolts: T.field.bolts,
+      out: FOUT, chips: true,
     };
+    FOUT.units = null;
     drawField(cF, t, P, ROSTER, rel);
+    // the busts ride on their unit's bracket, a small rail under each unit (left flank reads outward-in, like the names did)
+    const seen = new Set();
+    (FOUT.units || []).forEach((U) => {
+      const n = U.names.length, step = 92, w = (n - 1) * step, low = (U.u === 1 || U.u === 2) ? 30 : 6;
+      const x0 = U.flank < 0 ? clamp(U.L + 40, 48, 1872 - w) : clamp(U.R - 40 - w, 48, 1872 - w);
+      U.names.forEach((nmK, k) => {
+        const f = FCHIP[nmK]; if (!f) return; seen.add(nmK);
+        const x = x0 + k * step, y = U.B + low, a = U.a, rise = (1 - eo(clamp(a, 0, 1))) * 10;
+        f.host.style.left = (x - 38) + 'px'; f.host.style.top = (y - 34) + 'px';
+        show(f.host, a, `translateY(${rise.toFixed(1)}px)`);
+        f.nm.style.left = x + 'px'; f.nm.style.top = (y + 47) + 'px';
+        show(f.nm, a * .95, `translateX(-50%) translateY(${rise.toFixed(1)}px)`);
+        if (a > 0) f.m.el.classList.toggle('blink', ((t * 1000 + f.ph) % 3900) < 140);
+      });
+    });
+    for (const k in FCHIP) if (!seen.has(k)) { show(FCHIP[k].host, 0); show(FCHIP[k].nm, 0); }
   }
 
   // --- cold open ---
@@ -779,7 +815,7 @@ window.render = function (t) {
       if (im.bi) { im.bi.style.opacity = (on && at(beatAt)) ? 1 : 0; const [BZ, BX, BY] = s.beat.cam || [1, .5, .5], bz = BZ * (1.04 + .04 * ramp(t, beatAt, s.out)), bl = (v) => clamp(v, .5 / bz, 1 - .5 / bz); const [bx, by] = camTx({ z: bz, cx: bl(BX), cy: bl(BY) }); im.bi.style.transform = `translate(${bx.toFixed(1)}px, ${by.toFixed(1)}px) scale(${bz.toFixed(4)})`; }
       const end = Math.min(beatAt, s.out);
       s.calls.forEach(([, fx, fy], ki) => {
-        const lb = e.labels[si][ki], a = s.in + .55 + ki * .9;
+        const lb = e.labels[si][ki], a = s.in + BEAT + ki * 1.5 * BEAT;   // r5 audio council: callouts on the 8th grid, with their bell or pluck
         const lo = on ? sm(ramp(t, a, a + .3)) * (1 - sm(ramp(t, end - .3, end))) * cout : 0;   // leaders leave with the screen
         show(lb, lo, `translateY(${((1 - eo(ramp(t, a, a + .5))) * 10).toFixed(1)}px)`);
         if (lo > 0) {
