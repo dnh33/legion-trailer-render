@@ -390,7 +390,7 @@ for k, tb in enumerate(ev('bolt')):
     d = 3.2; tt_ = tt(d)
     crack = bp(noise(d), 300, 3800) * np.exp(-tt_ / 0.12) * 0.6
     rumble = lp(noise(d), 140, 4) * (1 - np.exp(-tt_ / 0.08)) * np.exp(-tt_ / 0.7) * 5
-    place((crack + rumble) * env(len(tt_), 0.005, 0.8), tb + 0.05, 0.035 + 0.01 * k, -0.3 + 0.5 * k, 0.5, 'fx')   # review: 6-8 dB under v1's music
+    place((crack + rumble) * env(len(tt_), 0.005, 0.8), tb + 0.05, 0.14 + 0.04 * k, -0.3 + 0.5 * k, 0.5, 'fx')   # review r4: heard, about 15 dB under the music
 
 # ---------------------------------------------------------------- forges
 pent = [m('D', 5), m('F', 5), m('G', 5), m('A', 5), m('C', 6), m('D', 6)]
