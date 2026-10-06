@@ -97,12 +97,20 @@ CH = {   # root (bass), upper voicing, arpeggio cell
 # v4 (owner: the music keeps the first trailer's pace): bars 0-8 and the last 8 bars are v1's chords 1:1; Act II is
 # through-composed under the twelve chapters, with one held A under the BitcoinSV chain so the blocks finish before the screens.
 V1 = ['Dm', 'Dm', 'Dm', 'Bb', 'Gm', 'A', 'Dm', 'Bb', 'Gm', 'A', 'Dm', 'Bb', 'Gm', 'Dm', 'Bb', 'F', 'Dm', 'Bb', 'Gm', 'A', 'Dm', 'Bb', 'A', 'D']
-ACT2 = ['Dm', 'Bb', 'Gm',  'A', 'Dm', 'Bb',  'F', 'F', 'Gm',  'A', 'A', 'Dm',      # c1-c4
-        'F', 'Bb', 'Gm', 'Dm', 'Bb',  'Gm', 'A', 'Dm', 'Bb', 'A',                  # c5-c6
-        'F', 'Bb', 'Gm',  'A', 'Dm', 'F',  'Bb', 'Gm', 'Dm', 'Gm',                 # c7-c9
-        'A',  'A', 'A', 'Dm', 'Bb', 'Gm', 'A',                                     # c10: the chain over a held A, the screens resolve
-        'Dm', 'Bb', 'F', 'F',  'Gm', 'Bb', 'Gm', 'Gm', 'A']                        # c11, c12
-assert len(ACT2) == 48
+ACT2 = ['Dm', 'Bb', 'F', 'A',                    # c0  Zealot leads (8-12)
+        'Dm', 'Bb', 'Gm',                         # c1
+        'A', 'Dm', 'Bb', 'F',                     # c2
+        'F', 'Gm', 'A', 'A', 'Dm',                # c3
+        'F', 'Bb', 'Gm',                          # c4
+        'Dm', 'Bb', 'Gm', 'A', 'Dm',              # c5
+        'Bb', 'A', 'F', 'Bb',                     # c6
+        'Gm', 'A', 'Dm',                          # c7
+        'F', 'Bb', 'Gm',                          # c8
+        'Dm', 'Gm', 'A', 'Dm',                    # c9
+        'A', 'A', 'A', 'Dm', 'Bb', 'Gm', 'A',     # c10: the chain over a held A, the screens resolve on Dm
+        'Dm', 'Bb', 'F', 'F',                     # c11
+        'Gm', 'Bb', 'Gm', 'Gm', 'A']              # c12, then v1's last 8 bars
+assert len(ACT2) == 54
 PROG = V1[:8] + ACT2 + V1[16:]
 NBARS = int(round(DUR / BAR))
 PROG = (PROG + ['D'] * NBARS)[:NBARS]
@@ -261,11 +269,11 @@ def bar_of(t): return int(t // BAR)
 ORGAN_PLAN = [((0, 2), (1,), 0.0, .10, .00),
               ((2, 4), (1, 2), 0.0, .18, .10),
               ((4, 8), (1, 2), 0.0, .16, .10),
-              ((8, 40), (1, 2), 0.0, .08, .04),
-              ((40, 56), (1, 2), 0.0, .09, .05),
-              ((56, 60), (1, 2, 4), 0.0, .14, .07),
-              ((60, 61), (1, 2, 4), 0.6, .36, .26),
-              ((61, 64), (1, 2, 4), 0.35, .22, .18)]
+              ((8, 42), (1, 2), 0.0, .08, .04),
+              ((42, 62), (1, 2), 0.0, .09, .05),
+              ((62, 66), (1, 2, 4), 0.0, .14, .07),
+              ((66, 67), (1, 2, 4), 0.6, .36, .26),
+              ((67, 70), (1, 2, 4), 0.35, .22, .18)]
 for (b0, b1), ranks, mix, g, cg in ORGAN_PLAN:
     for k in range(b0, min(b1, NBARS)):
         root, upper, _ = CH[PROG[k]]
@@ -376,6 +384,13 @@ for k, tc in enumerate(ev('card')):
     place(bell((m('A', 3), m('D', 4), m('F', 3))[k % 3], 5.0, 0.8), tc, 0.20, 0, 0.7, 'fx')
     if k > 0:                                            # the first card follows v1's muster: no swell inside bar 7
         place(swell(1.2, 300, 3200), tc - 0.4, 0.07, 0, 0.5, 'fx')
+
+# v5: thunder under the lightning on the field. A far rumble below the music: v1's notes and cues are unchanged.
+for k, tb in enumerate(ev('bolt')):
+    d = 3.2; tt_ = tt(d)
+    crack = bp(noise(d), 300, 3800) * np.exp(-tt_ / 0.12) * 0.6
+    rumble = lp(noise(d), 140, 4) * (1 - np.exp(-tt_ / 0.08)) * np.exp(-tt_ / 1.1) * 5
+    place((crack + rumble) * env(len(tt_), 0.005, 0.8), tb + 0.05, 0.10 + 0.04 * k, -0.3 + 0.5 * k, 0.6, 'fx')
 
 # ---------------------------------------------------------------- forges
 pent = [m('D', 5), m('F', 5), m('G', 5), m('A', 5), m('C', 6), m('D', 6)]

@@ -1,5 +1,5 @@
 {
-  "trailer": "video-v4",
+  "trailer": "video-v5",
   "shards": 5,
   "runner": "macos-15",
   "note": "Change any value (or this note) and push to start a render. Results appear under Releases."

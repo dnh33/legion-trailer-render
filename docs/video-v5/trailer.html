@@ -75,6 +75,7 @@ canvas,svg.full{position:absolute;left:0;top:0;width:1920px;height:1080px}
 .tbody{height:406px;padding:18px 34px;font:400 31px/58px var(--mono);color:#b9c2cf;white-space:pre;background:
   repeating-linear-gradient(0deg,rgba(255,255,255,.012) 0 2px,transparent 2px 4px),linear-gradient(#07090b,#05070a)}
 .tbody .p{color:var(--phos)}.tbody .d{color:#6e7787}.tbody .g{color:#e8c766}.tbody .gr{color:var(--phos)}
+.tbody .mk{color:#e8c766;font-weight:700;text-shadow:0 0 14px rgba(232,199,102,.6)}
 .tbody .s{color:#ffe08a;font-weight:600;text-shadow:0 0 18px rgba(255,200,90,.7)}
 .tbody .cur{display:inline-block;width:15px;height:30px;background:var(--phos);vertical-align:-5px;margin-left:3px;box-shadow:0 0 14px rgba(124,255,178,.7)}
 .shotcap{font:600 50px/1 var(--disp);color:var(--parch);text-shadow:0 3px 20px #000}
@@ -181,6 +182,7 @@ canvas,svg.full{position:absolute;left:0;top:0;width:1920px;height:1080px}
   </svg>
 
   <canvas id="cB" width="1920" height="1080"></canvas>
+  <canvas id="cF" width="1920" height="1080"></canvas>   <!-- v5: the war table, the field, the field at dawn (field.js) -->
 
   <div id="chapter" class="abs c hide"><i></i><span id="chapterT"></span><i></i></div>
 
@@ -240,10 +242,10 @@ canvas,svg.full{position:absolute;left:0;top:0;width:1920px;height:1080px}
   <div id="end">
     <svg id="wm2" class="wm" style="top:470px" viewBox="0 0 1000 230"></svg>
     <div id="tag" class="abs c tag hide" style="top:712px">Local. Claude-native. Open source.</div>
-    <div id="url" class="abs c url hide" style="top:790px">github.com/dnh33/legion  ·  0.2.4 BETA</div>
+    <div id="url" class="abs c url hide" style="top:790px">getlegion.xyz  ·  0.2.5 BETA</div>
     <svg id="sig" class="abs hide" style="left:925px;top:836px;overflow:visible" width="70" height="84" viewBox="0 0 70 84"><g fill="none" stroke="#caa64a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 8px rgba(202,166,74,.55))">
       <path d="M35,4V80"/><path d="M19,28H51"/><path d="M3,19L12,28L3,37"/><path d="M67,19L58,28L67,37"/></g></svg>
-    <div id="print" class="abs c print hide" style="top:968px">Runs on your own Claude subscription via the official Agent SDK.</div>
+    <div id="print" class="abs c print hide" style="top:968px">Runs on your own Claude subscription via the official Agent SDK.  ·  github.com/dnh33/legion</div>
   </div>
 
   <canvas id="cC" width="1920" height="1080"></canvas>
@@ -257,7 +259,8 @@ canvas,svg.full{position:absolute;left:0;top:0;width:1920px;height:1080px}
 
 <script type="module">
 import { createMascot } from '../../ui/src/mascot/engine.js';
-import { T, LOG, FPS, CUTS, TRANSITION, ROSTER, CH, BAR, RH } from './timeline.mjs';
+import { T, LOG, FPS, CUTS, TRANSITION, ROSTER, CH, BAR, RH, b } from './timeline.mjs';
+import { drawField } from './field.js';
 
 const W = 1920, H = 1080;
 const GIF = /[?&]gif/.test(location.search); // gif pass: no film grain, sparser embers (keeps the palette small)
@@ -381,8 +384,8 @@ const AC = (s) => s.replace(/\b(PC|VM|BSV|MCP)\b/g, '<span class="ac">$1</span>'
 const CHEL = [];
 for (const c of CH) {
   const card = document.createElement('div'); card.className = 'card hide'; $('chapters').appendChild(card);
-  const pb = document.createElement('div'); pb.className = 'pbust'; card.appendChild(pb);
-  const pm = await mkMascot(pb, c.patron, {});
+  // v5: Zealot's chapter has no painted card bust: the Relic itself walks into the card (T.relic)
+  let pm = null; if (!c.relicPatron) { const pb = document.createElement('div'); pb.className = 'pbust'; card.appendChild(pb); pm = await mkMascot(pb, c.patron, {}); }
   if (c.forge === 'chain') card.insertAdjacentHTML('beforeend', '<svg class="fchain" id="chain" viewBox="0 0 1240 200"></svg><div class="fticker" id="ticker"><div id="tickerIn"></div></div>');
   if (c.forge === 'mesh') card.insertAdjacentHTML('beforeend', '<canvas class="fmesh" id="mesh" width="760" height="560"></canvas>');
   card.insertAdjacentHTML('beforeend', `<div class="crule"></div><div class="cln">${AC(c.line)}</div>`);
@@ -416,6 +419,7 @@ function stateAt(t) {
 
 /* ---------- ambience: seeded, analytic (a pure function of t) ---------- */
 const cA = $('cA').getContext('2d'), cB = $('cB').getContext('2d'), cC = $('cC').getContext('2d');
+const cF = $('cF').getContext('2d');
 const R = rng(40414);
 const smoke = Array.from({ length: 18 }, () => ({ x: R() * W, y: R() * H, r: 260 + R() * 300, vx: (R() - .5) * 18, vy: -(5 + R() * 10), ph: R() * 6.28, a: .028 + R() * .03, k: R() }));
 const embers = Array.from({ length: 120 }, () => ({ x: R() * W, P: 8 + R() * 9, off: R(), s: .8 + R() * 2.2, amp: 20 + R() * 70, f: .3 + R() * .8, ph: R() * 6.28, c: R() < .05 ? 2 : (R() < .5 ? 0 : 1), fg: R() < .22 }));
@@ -678,6 +682,32 @@ window.render = function (t) {
   drawRays(t, rayK * archOp);
   drawFront(t, rel, .3 + .7 * ramp(t, 0, 3));
 
+  // --- v5: the war table and the battlefield (Act I), the field at dawn (the finale) ---
+  {
+    const MU = T.muster, VC = T.victory, EN = T.end;
+    const dive = eo(ramp(t, b(1, 3.4), b(2, .8)));
+    const dawnOn = t >= VC.at - .02 ? 1 : 0;
+    const P = {
+      table: ramp(t, .2, 1.6) * (1 - ramp(t, b(1, 3.7), b(2, .8))),
+      dive,
+      field: Math.max(sm(ramp(t, b(1, 3.6), b(2, .6))) * (1 - sm(ramp(t, ...MU.gridOut))), dawnOn * (1 - sm(ramp(t, ...EN.fadeOut)))),
+      zoom: dawnOn ? 1.02 + .02 * ramp(t, VC.at, EN.fadeOut[1]) : 1.1 - .1 * eo(ramp(t, b(1, 3.6), b(2, 2.2))) + .04 * ramp(t, b(2, 2.2), b(8)),
+      drift: dawnOn ? 0 : -24 * ramp(t, b(1, 3.6), b(8)),
+      dawn: dawnOn,
+      wake: dawnOn ? 1 : sm(ramp(t, b(2, 2), b(2, 2) + .6)),
+      advance: dawnOn ? 0 : ramp(t, b(1, 3.6), b(2, 2)),
+      push: dawnOn ? 1 : eo(ramp(t, b(3), b(5))),
+      step: dawnOn ? 1 : eo(ramp(t, b(2, 3.5), b(3, 3))),
+      overlay: dawnOn ? 0 : ramp(t, b(2, 2.6), b(2, 2.9)) * (1 - ramp(t, b(4) - .3, b(4) + .3)),
+      sweep: eo(ramp(t, b(2, 2.6), b(3, 1))),
+      t0: b(2, 2.6),
+      tagK: 1,
+      dim: dawnOn ? keys(t, [[VC.at, .2], [VC.at + 1, .42], [EN.wmDraw[0], .58]]) : keys(t, [[b(4) - .2, 0], [b(4) + .6, .5], [MU.roster - .2, .5], [MU.roster + .5, .64]]),
+      bolts: T.field.bolts,
+    };
+    drawField(cF, t, P, ROSTER, rel);
+  }
+
   // --- cold open ---
   const grow = eo(ramp(t, .1, 1.7));
   $('flame').setAttribute('transform', `translate(150 160) scale(${(grow * (1 + .05 * Math.sin(t * 11) + .03 * Math.sin(t * 19))).toFixed(3)} ${(grow * (1 + .09 * Math.sin(t * 8.3 + 1) + .05 * Math.sin(t * 17))).toFixed(3)}) skewX(${(Math.sin(t * 6.1) * 3.2 + Math.sin(t * 13) * 1.4).toFixed(2)}) translate(-150 -160)`);
@@ -730,7 +760,7 @@ window.render = function (t) {
     const cin = sm(ramp(t, c.in - .05, c.in + .4)), cout = 1 - sm(ramp(t, c.out - .4, c.out - .05));
     const cardOn = cin * (at(c.cardOut) ? 0 : 1);                  // hard cut: one frame, no blend
     show(e.card, cardOn, `translateY(${((1 - eo(ramp(t, c.in - .25, c.in + .8))) * 14).toFixed(1)}px)`);
-    if (cardOn > 0) e.pm.el.classList.toggle('blink', ((t * 1000 + 300) % 3900) < 150);
+    if (cardOn > 0 && e.pm) e.pm.el.classList.toggle('blink', ((t * 1000 + 300) % 3900) < 150);
     // kicker + title: card position, then the header for the rest of the chapter
     const hu = eo(ramp(t, c.cardOut - .5, c.cardOut - .02));     // the title is in the header before the screen lands
     const place = (el, A, B, rise) => { const x = lerp(A[0], B[0], hu), y = lerp(A[1], B[1], hu) + rise, s = lerp(A[2], B[2], hu); el.style.opacity = (cin * cout).toFixed(3); el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) scale(${s.toFixed(4)})`; };
@@ -819,6 +849,7 @@ await document.fonts.load('400 20px "JetBrains Mono"');
 await document.fonts.load('600 20px "JetBrains Mono"');
 await Promise.all([...document.images].map((i) => i.decode().catch(() => {})));
 window.render(0);
+await document.fonts.load('600 16px "JetBrains Mono"'); await document.fonts.ready;
 window.__ready = true;
 </script>
 </body>

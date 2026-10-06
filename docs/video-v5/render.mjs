@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// Deterministic frame-by-frame renderer for docs/video-v4/trailer.html.
-//   node docs/video-v4/render.mjs                full render: mp4, gif, poster
-//   node docs/video-v4/render.mjs --keys         key-frame PNGs only (for review), into <tmp>/legion-keys
-//   node docs/video-v4/render.mjs --t=12.5,30    specific PNG frames
+// Deterministic frame-by-frame renderer for docs/video-v5/trailer.html.
+//   node docs/video-v5/render.mjs                full render: mp4, gif, poster
+//   node docs/video-v5/render.mjs --keys         key-frame PNGs only (for review), into <tmp>/legion-keys
+//   node docs/video-v5/render.mjs --t=12.5,30    specific PNG frames
 // Every frame calls window.render(t) and seeks all CSS animations, so nothing depends on wall-clock time.
 import http from 'node:http';
 import fs from 'node:fs';
@@ -20,7 +20,7 @@ const POSTER_T = Number(process.env.POSTER_T || T.end.sigil + 1.2);   // the ful
 const KEYS = [3.5, 8.6, 13, 16.2, 18.8, 21.8, 24.6, 28, 31, 33.8, 35.8, 38.8, 44, 49, 50.03, 51.9, 54.5, 58.6];
 const args = process.argv.slice(2);
 const WORKERS = Number(process.env.WORKERS || Math.min(2, os.cpus().length));
-const TMP = process.env.VIDEO_TMP || path.join(os.tmpdir(), 'legion-video-v4');
+const TMP = process.env.VIDEO_TMP || path.join(os.tmpdir(), 'legion-video-v5');
 
 async function loadPlaywright() {
   try { return { pw: await import('playwright'), opts: {} }; } catch { /* fall through */ }
@@ -43,7 +43,7 @@ function serve() {
 async function openPage(browser, port, gif = false, preview = false) {
   const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: gif ? 0.5 : 1 });
   page.on('pageerror', (e) => console.error('page error:', e.message));
-  await page.goto(`http://127.0.0.1:${port}/docs/video-v4/trailer.html${gif && !preview ? '?gif=1' : ''}`);
+  await page.goto(`http://127.0.0.1:${port}/docs/video-v5/trailer.html${gif && !preview ? '?gif=1' : ''}`);
   await page.waitForFunction('window.__ready === true', null, { timeout: 60000 });
   const txt = await page.evaluate(() => { const c = document.body.cloneNode(true); c.querySelectorAll('.mx, svg, canvas, script').forEach((e) => e.remove()); return c.textContent; }); // the painted busts' own code-scroll says TODO: art, not copy
   for (const bad of ['OWNER', 'TODO', 'lorem']) if (txt.includes(bad)) throw new Error(`placeholder "${bad}" on screen`);
@@ -153,7 +153,7 @@ if (args.includes('--assemble')) {          // CI: encode + score only; no brows
     const dir = path.join(TMP, 'frames'), n = fs.readdirSync(dir).filter((f) => /^f\d{5}\.jpg$/.test(f)).length;
     if (n !== FRAMES) throw new Error(`${n} of ${FRAMES} frames in ${dir}`);
     writeCues();
-    const mp4 = path.join(HERE, 'legion-v4.mp4');
+    const mp4 = path.join(HERE, 'legion-v5.mp4');
     encodeMp4(dir, mp4);
     console.log(path.relative(ROOT, mp4), (fs.statSync(mp4).size / 1e6).toFixed(2) + ' MB');
   process.exit(0);
@@ -187,7 +187,7 @@ try {
     }));
     writeCues();
     spawnSync('python3', [path.join(HERE, 'score.py')], { stdio: 'inherit' });
-    const out = path.join(HERE, 'legion-v4-preview.mp4');
+    const out = path.join(HERE, 'legion-v5-preview.mp4');
     ff(['-framerate', String(PF), '-i', path.join(dir, 'p%05d.jpg'), '-i', path.join(HERE, 'score.wav'), '-map', '0:v', '-map', '1:a', '-c:v', 'libx264', '-crf', '26', '-pix_fmt', 'yuv420p',
       '-af', 'loudnorm=I=-14:TP=-1.5:LRA=11', '-c:a', 'aac', '-b:a', '160k', '-shortest', '-movflags', '+faststart', out]);
     console.log(path.relative(ROOT, out), (fs.statSync(out).size / 1e6).toFixed(2) + ' MB');
@@ -201,8 +201,8 @@ try {
     console.log(`shard ${K}/${N}: frames ${a0}-${z0} in ${dir}`);
   } else if (args.includes('--poster')) {
     const [poster] = await renderStills(browser, port, [POSTER_T], path.join(TMP, 'poster'));
-    fs.copyFileSync(poster, path.join(HERE, 'poster-v4.png'));
-    console.log('docs/video-v4/poster-v4.png');
+    fs.copyFileSync(poster, path.join(HERE, 'poster-v5.png'));
+    console.log('docs/video-v5/poster-v5.png');
   } else if (args.find((a) => a.startsWith('--frames='))) {
     // re-render a frame range into the existing frame folder (after a local fix), then encode and mux again
     const ranges = args.find((a) => a.startsWith('--frames=')).slice(9).split(',').map((r) => r.split(':').map(Number)).sort((x, y) => x[0] - y[0]);
@@ -220,7 +220,7 @@ try {
     }
     await page.close();
     writeCues();
-    const mp4 = path.join(HERE, 'legion-v4.mp4');
+    const mp4 = path.join(HERE, 'legion-v5.mp4');
     ff(['-framerate', String(FPS), '-i', path.join(dir, 'f%05d.jpg'), '-c:v', 'libx264', '-preset', 'slow', '-crf', '19', '-maxrate', '3800k', '-bufsize', '8000k',
       '-vf', 'scale=out_color_matrix=bt709:out_range=tv', '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709',
       '-pix_fmt', 'yuv420p', '-profile:v', 'high', '-movflags', '+faststart', '-an', mp4]);
@@ -229,7 +229,7 @@ try {
   } else if (args.includes('--cues')) {
     console.log(writeCues());
   } else if (args.includes('--gif-only') || args.includes('--encode-gif')) {
-    const gdir = path.join(TMP, 'gif'), gif = path.join(HERE, 'legion-v4.gif');
+    const gdir = path.join(TMP, 'gif'), gif = path.join(HERE, 'legion-v5.gif');
     if (!args.includes('--encode-gif')) await gifFrames(browser, port, gdir);
     encodeGif(gdir, gif);
     console.log(path.relative(ROOT, gif), (fs.statSync(gif).size / 1e6).toFixed(2) + ' MB');
@@ -239,7 +239,7 @@ try {
     const per = Math.ceil(FRAMES / WORKERS);
     await Promise.all(Array.from({ length: WORKERS }, (_, w) => worker(browser, port, w * per, Math.min(FRAMES, (w + 1) * per), dir)));
     writeCues();
-    const mp4 = path.join(HERE, 'legion-v4.mp4'), gif = path.join(HERE, 'legion-v4.gif');
+    const mp4 = path.join(HERE, 'legion-v5.mp4'), gif = path.join(HERE, 'legion-v5.gif');
     ff(['-framerate', String(FPS), '-i', path.join(dir, 'f%05d.jpg'), '-c:v', 'libx264', '-preset', 'slow', '-crf', '19', '-maxrate', '3800k', '-bufsize', '8000k',
       '-vf', 'scale=out_color_matrix=bt709:out_range=tv', '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709',
       '-pix_fmt', 'yuv420p', '-profile:v', 'high', '-movflags', '+faststart', '-an', mp4]);
@@ -248,8 +248,8 @@ try {
     await gifFrames(browser, port, gdir);
     encodeGif(gdir, gif);
     const [poster] = await renderStills(browser, port, [POSTER_T], path.join(TMP, 'poster'));
-    fs.copyFileSync(poster, path.join(HERE, 'poster-v4.png'));
-    for (const f of [mp4, gif, path.join(HERE, 'poster-v4.png')]) console.log(path.relative(ROOT, f), (fs.statSync(f).size / 1e6).toFixed(2) + ' MB');
+    fs.copyFileSync(poster, path.join(HERE, 'poster-v5.png'));
+    for (const f of [mp4, gif, path.join(HERE, 'poster-v5.png')]) console.log(path.relative(ROOT, f), (fs.statSync(f).size / 1e6).toFixed(2) + ' MB');
   }
 } finally {
   await browser.close();
