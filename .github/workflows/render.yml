@@ -12,7 +12,7 @@ name: Render trailer
 on:
   push:
     branches: [main]
-    paths: [render.json, .github/workflows/render.yml, "docs/**", "ui/**"]
+    paths: [render.json, .github/workflows/render.yml, "docs/**", "ui/**", "tools/**"]
   workflow_dispatch:
     inputs:
       trailer:
@@ -141,7 +141,7 @@ jobs:
       - name: ffmpeg, numpy, scipy (the score)
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
-          python3 -m pip install --quiet numpy scipy
+          python3 -m pip install --quiet numpy scipy pillow
       - uses: actions/download-artifact@v4
         with:
           pattern: frames-*
@@ -155,6 +155,8 @@ jobs:
         run: if [ -f "$D/xcut.mjs" ]; then node "$D/xcut.mjs"; fi
       - uses: actions/download-artifact@v4
         with: { name: gif-poster, path: "${{ env.D }}" }
+      - name: Review pack (contact sheets, every hard cut before/on/after, audio report)
+        run: python3 tools/review.py "$D"
       - name: Report
         run: |
           {
@@ -174,4 +176,4 @@ jobs:
         run: |
           TAG="${{ needs.plan.outputs.trailer }}-r${{ github.run_number }}"
           gh release create "$TAG" --target "$GITHUB_SHA" --title "$TAG" --notes-file "$RUNNER_TEMP/notes.md" \
-            "$D"/*.mp4 "$D"/*.gif "$D"/poster-*.png "$D"/cues.json
+            "$D"/*.mp4 "$D"/*.gif "$D"/poster-*.png "$D"/cues.json "$D"/review/*

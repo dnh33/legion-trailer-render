@@ -421,7 +421,7 @@ for tp in ev('push') + ev('pan'):
     sw = swell(0.9, 500, 5000); sw *= env(len(sw), 0, 0.025)
     place(sw, tp - 0.9 + 0.025, 0.06, 0, 0.4, 'fx')
     if round(tp, 3) in {round(x, 3) for x in GROUP_FIRST}:
-        place(war_drum(1.6, 150, 50, .5), tp, 0.40, 0, 0.4, 'drums')
+        place(war_drum(1.6, 150, 50, .5), tp, 0.0, 0, 0.4, 'drums')   # r7 review: its 150->50 Hz body doubled the kick (a second low hit, the DUTT again); gain 0 keeps the rng stream
 
 # hard cuts: glitch stutter; dissolves: a soft whoosh
 for c in CUES.get('cuts', []):
@@ -435,7 +435,7 @@ for c in CUES.get('cuts', []):
 for k, tc in enumerate(ev('card')):                     # fidelity: the card bell tolls the chord's root (F3 over A major and
     r = CH[chord_at(tc)][0] + 24                          # D4 over A major clashed); the dissolve's whoosh is the only riser
     while r > m('D', 4): r -= 12
-    place(bell(r, 5.0, 0.8), tc, 0.18 if group(tc)[0] != 18.5 else 0.14, 0, 0.7, 'fx')
+    place(bell(r, 5.0, 0.8), tc, 0.18, 0, 0.7, 'fx')
 
 # v5: thunder under the lightning on the field. A far rumble below the music: v1's notes and cues are unchanged.
 for k, tb in enumerate(ev('bolt')):

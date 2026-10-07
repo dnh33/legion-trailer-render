@@ -38,7 +38,7 @@ const SPEC = [
     screens: [{ img: 'c3-models.png', cam: [1.55, .36, .62], calls: [['Auto: Sonnet or Opus', .245, .505], ['OpenRouter, any model', .30, .707]] },
               { img: 'c3-takeover.png', cam: [1.8, .47, .42], from: [1.8, .47, .42], calls: [['Sonnet stops, Opus finishes', .32, .359], ['In the same conversation', .60, .359]] }] },
   { id: 'c4', patron: 'herald', state: 'idle', kicker: 'The Herald · Rooms', title: 'The order confers', line: 'Rooms of bots, and you.', bars: [1, 2],
-    screens: [{ img: 'c4-room.png', cam: [1.5, .55, .45], calls: [['Every hop counted', .575, .153], ['Handoffs by name', .47, .39]] }] },
+    screens: [{ img: 'c4-room.png', cam: [1.6, .47, .42], from: [1.6, .47, .42], calls: [['Every hop counted', .575, .153], ['Handoffs by name', .47, .39]] }] },
   { id: 'c5', patron: 'archivist', state: 'thinking', kicker: 'The Archivist · Library', title: 'A Library that remembers', line: 'Shared memory, in one graph.', bars: [1, 2, 2],
     screens: [{ img: 'c5-lattice.png', cam: [1.4, .64, .40], from: [1.45, .62, .36], calls: [['One graph, shared', .583, .437], ['Decisions keep their why', .79, .439]] },
               { img: 'c5-inbox.png', cam: [1.35, .6, .37], calls: [['Bots propose. You decide.', .289, .372], ['Web finds stay untrusted', .835, .181]] }] },
@@ -108,7 +108,7 @@ const SLOT0 = { cx: 0, cy: 0 };                             // filled in by trai
 
 export const T = {
   dur: b(V + 8),                                                  // 64 bars, 160 s
-  cold: { candleIn: [0, .9], l1: [b(0, 1.5), b(0, 2.6), b(2), b(2, .8)], l2: [b(1), b(1, 1), b(2), b(2, .8)], candleOut: [b(1, 3.2), b(1, 3.9)], end: b(2) },
+  cold: { candleIn: [0, .3], candleFall: 5.1, l1: [b(0, 1.5), b(0, 2.6), b(2), b(2, .8)], l2: [b(1), b(1, 1), b(2), b(2, .8)], candleOut: [b(2, .8), b(2, .9)], end: b(2) },
   awaken: { arch: [b(1, 3.2), b(2, 2.4)], wake: b(2, 2), sub: [b(2, 2.6), b(2, 3.4), b(3, 3.8), b(4, .5)], end: b(4) },
   muster: { banners: [b(4), b(4, 1), b(4, 2)], caption: [b(4, 2.2), b(4, 3), b(5, 3.8), b(6, .5)],
     // v1's roll call, 1:1 (owner: Act I and Act III keep the first trailer's pace; only the features slow down)
@@ -122,10 +122,10 @@ export const T = {
   relic: [
     [0, 960, 400, 600, 0], [b(2, .96), 960, 400, 600, 0], [b(2, 1.6), 960, 400, 600, 1], [b(2, 2), 960, 400, 600, 1], [b(3, 3.6), 960, 400, 600, 1],   // seat CANVAS: dark through the burning-map dive, revealed by the first bolt (5.63 s), full by 6.0, wakes at 6.25
     [b(4, 1.6), 1555, 470, 560, 1], [b(6), 1555, 470, 560, 1],
-    [b(6, 1.2), 'slot', 'slot', 'slot', 1], [b(7, 2), 'slot', 'slot', 'slot', 1],     // into Zealot's place in the grid
+    [b(6, 1.2), 'slot', 'slot', 'slot', 1], [b(7, 3), 'slot', 'slot', 'slot', 1],   // r7: holds its slot until the grid dissolves (no empty Zealot plate)     // into Zealot's place in the grid
     // v5: Zealot is its own chapter's patron. It never walks across the grid or the card's line: it fades out of the slot,
     // in on the card, out on the cut to the screen, and in at its Act II home.
-    [b(7, 2.8), 'slot', 'slot', 'slot', 0], [b(8, .15), CARD_BUST.cx, CARD_BUST.cy, CARD_BUST.h, 0], [b(8, .55), CARD_BUST.cx, CARD_BUST.cy, CARD_BUST.h, 1],   // review r4: in only after the grid has gone
+    [b(8, .1), 'slot', 'slot', 'slot', 0], [b(8, .15), CARD_BUST.cx, CARD_BUST.cy, CARD_BUST.h, 0], [b(8, .55), CARD_BUST.cx, CARD_BUST.cy, CARD_BUST.h, 1],   // review r4: in only after the grid has gone
     [CH[0].cardOut - .3, CARD_BUST.cx, CARD_BUST.cy, CARD_BUST.h, 1], [CH[0].cardOut - .02, CARD_BUST.cx, CARD_BUST.cy, CARD_BUST.h, 0],
     [CH[0].cardOut - .01, RH.cx, RH.cy, RH.h, 0], [CH[0].cardOut + .45, RH.cx, RH.cy, RH.h, 1], [b(V + 4), RH.cx, RH.cy, RH.h, 1],
     [b(V + 4, 1.6), 960, 400, 640, 1], [b(V + 5), 960, 400, 640, 1], [b(V + 5, 3), 960, 250, 420, 1], [999, 960, 250, 420, 1],

@@ -6,3 +6,4 @@ docs/*/*.wav
 docs/*/*.gif
 docs/*/poster-*.png
 docs/*/cues.json
+docs/*/review/

@@ -105,7 +105,7 @@ function buildGround(dawn) {
       const o = (j * iw + i) * 4;
       for (let q = 0; q < 3; q++) {
         let v = lerp(mud[q], mud2[q], n2) * (.75 + .5 * n) * dk;
-        v = lerp(v, pud[q] * (.55 + .45 * (1 - y / GH)), p);
+        v = lerp(v, pud[q] * (.55 + .45 * (1 - y / GH)) * (dawn ? 1 : lerp(1, .38, clamp((y - 140) / 260))), p);   // night puddles darken toward camera
         D[o + q] = lerp(v, haze[q], hz);
       }
       D[o + 3] = 255;
@@ -776,8 +776,8 @@ function build() {
       return c;
     })(),
     horde: buildHorde(false), rise: buildRise(),
-    fog: [301, 302, 303].map((sd) => { const m = buildFog(sd); return { n: tinted(m, 'rgb(112,104,96)'), d: tinted(m, 'rgb(226,184,134)'), w: m }; }), rain: (() => { const a = buildRain(300, 26, 1.1, .4, 91), b2 = buildRain(70, 70, 2.2, .5, 92), g = a.getContext('2d'); g.drawImage(b2, 0, 0); return a; })(), smoke: buildSmoke(),
-    gWarm: glowSprite('255,150,60'), gCold: glowSprite('170,200,255'), gRed: glowSprite('255,50,40', 32, .2), gGreen: glowSprite('124,255,178', 64, .2), gYel: glowSprite('255,214,140', 64, .25),
+    fog: [301, 302, 303].map((sd) => { const m = buildFog(sd); return { n: tinted(m, 'rgb(112,104,96)'), d: tinted(m, 'rgb(226,184,134)'), w: m }; }), rain: (() => { const a = buildRain(300, 26, 1.1, .4, 91), b2 = buildRain(70, 70, 2.2, .5, 92), g = a.getContext('2d'); g.drawImage(b2, 0, 0); return a; })(), smoke: buildSmoke(), smokeL: (() => { const m = buildSmoke(); return tinted(m, 'rgb(186,180,170)'); })(),
+    gWarm: glowSprite('255,150,60'), gCold: glowSprite('170,200,255'), gRed: glowSprite('255,50,40', 32, .2), gShadow: glowSprite('3,4,5', 64, .55), gGreen: glowSprite('124,255,178', 64, .2), gYel: glowSprite('255,214,140', 64, .25),
     wood: buildWood(), map: buildMap(),
     tc: mk(W, H),
   };
@@ -803,13 +803,13 @@ const TAGS = [ // text, screen x at rest, distance, pole (base units above the c
 for (const g of TAGS) HORDE.push({ d: g.d, X: g.X - 34, type: 1, ph: R0() * 6.28, gait: 1, eye: true, blink: R0() * 6.28, b: bucketOf(g.d), carrier: true });
 HORDE.sort((p, q) => q.d - p.d);
 const STRIKES = [[3, 2], [0, 1], [1, 0], [2, 3], [4, 3]];   // [tag, unit] in the order the orders land
-const FOGS = [[90, 0, .8, 9], [50, 1, .7, -14], [32, 2, .5, 18], [21, 0, .32, -24], [12, 1, .14, 30]];   // distance, sprite, alpha, drift px/s
+const FOGS = [[90, 0, .8, 9], [50, 1, .7, -14], [32, 2, .5, 18], [21, 0, .32, -24], [12, 1, .14, 30], [6.3, 2, .34, 22]];   // the last: low mist over the front rank's feet   // distance, sprite, alpha, drift px/s
 const FIRES = [[120, .8], [390, 1], [650, .7], [1290, .9], [1790, .8]].map(([x, s], i) => ({ x, s, ph: i * 1.7 }));
 
 // ---------------------------------------------------------------- camera (parallax by layer depth)
 const CAM = { z: 1, dx: 0, sx: 0, sy: 0 };
 // during the dive the whole field is held in register with the cathedral miniature: point a (the real ruin's foot) maps to b
-const DV = { k: 1, ax: 0, ay: 0, bx: 0, by: 0 };
+const DV = { k: 1, ax: 0, ay: 0, bx: 0, by: 0, mis: 1 };
 function setL(c, p) {
   const z = 1 + (CAM.z - 1) * p, e = 960 * (1 - z) + (CAM.dx + CAM.sx) * p, f = HZ * (1 - z) + CAM.sy * p, k = DV.k;
   c.setTransform(z * k, 0, 0, z * k, DV.bx + (e - DV.ax) * k, DV.by + (f - DV.ay) * k);
@@ -979,6 +979,7 @@ function drawHorde(c, t, P, flash, out) {
     if (a <= .02) continue;
     const pose = Math.floor((t * m.gait * 2.6 + m.ph) % 4), B = BUCKETS[m.b], spr = A.horde.sprites[m.b][m.type][pose];
     const k = s / B.rs, bob = Math.abs(Math.sin(t * m.gait * 4.1 + m.ph)) * 2 * s;
+    c.globalAlpha = a * .7; c.drawImage(A.gShadow, x - 54 * s, y - 9 * s - bob * 0, 108 * s, 18 * s);   // contact shadow
     c.globalAlpha = a;
     if (m.mir) { c.save(); c.translate(x, 0); c.scale(-1, 1); c.drawImage(spr, -HB.x * s, y - HB.y * s - bob, spr.width * k, spr.height * k); c.restore(); }
     else c.drawImage(spr, x - HB.x * s, y - HB.y * s - bob, spr.width * k, spr.height * k);
@@ -1019,7 +1020,8 @@ function knightDraw(c, k, t, P, flash, sel) {
   const z = 1 + (CAM.z - 1) * P_FG, [hx, hy] = proj(x + fl * 4 * k.s, y - 300 * k.s, P_FG);
   return { hx, hy, top: hy, left: hx - 58 * k.s * z, right: hx + 58 * k.s * z };
 }
-function drawTags(c, t, P, carriers, flips) {
+// two passes: 0 = the poles (behind our line), 1 = the boards (above the weapons and the overlay's lines, so nothing crosses the text)
+function drawTags(c, t, P, carriers, flips, pass = 1) {
   const out = [];
   if (P.tagK <= 0 || P.dawn >= 1) return out;
   setL(c, P_MID);
@@ -1033,11 +1035,12 @@ function drawTags(c, t, P, carriers, flips) {
     const txt = on ? `✓ ${tg.text}` : tg.text, tw = c.measureText(txt).width, bw = tw + fs * 1.1, bh = fs * 1.55;
     const bx = clamp(px, bw / 2 + 14, W - bw / 2 - 14), by = top - bh * .5 - 6;   // never cut by the frame edge
     const pop = on ? 1 + .18 * Math.max(0, 1 - (fl - 1) * 4) * (fl >= 1 ? 1 : 0) : 1;
+    const [L, T] = proj(bx - bw / 2, by - bh / 2, P_MID), [Rr, B] = proj(bx + bw / 2, by + bh / 2, P_MID);
+    out[i] = { x: (L + Rr) / 2, y: B, w: Rr - L, h: B - T, L, R: Rr, T, B };
+    if (pass === 0) { c.globalAlpha = cr.a * P.tagK; c.fillStyle = 'rgb(10,10,12)'; c.fillRect(px - 1.5, by + bh * .5 - 2, 3, 14 + poleLen); continue; }
     c.save(); c.translate(bx, by); c.scale(pop, pop);
-    // the pole carries on to the board
     c.globalAlpha = cr.a * P.tagK;
-    c.fillStyle = 'rgb(10,10,12)'; c.fillRect(px - bx - 1.5, bh * .5 - 2, 3, 14 + poleLen);
-    c.fillStyle = on ? 'rgba(6,18,12,.92)' : 'rgba(22,6,6,.9)'; c.fillRect(-bw / 2, -bh / 2, bw, bh);
+    c.fillStyle = on ? 'rgba(6,18,12,.97)' : 'rgba(22,6,6,.96)'; c.fillRect(-bw / 2, -bh / 2, bw, bh);
     const col = on ? [124, 255, 178] : [255, 78, 64];
     c.strokeStyle = rgba(...col, .95); c.lineWidth = 2.5; c.strokeRect(-bw / 2 + 1.25, -bh / 2 + 1.25, bw - 2.5, bh - 2.5);
     c.globalCompositeOperation = 'lighter'; c.globalAlpha = cr.a * P.tagK * .35; c.drawImage(on ? A.gGreen : A.gRed, -bw * .75, -bh * 1.4, bw * 1.5, bh * 2.8);
@@ -1045,7 +1048,6 @@ function drawTags(c, t, P, carriers, flips) {
     c.fillStyle = on ? 'rgb(170,255,205)' : 'rgb(255,104,88)'; c.fillText(txt, 0, 1);
     if (on && fl < 1.35) { const u = fl - 1; if (u >= 0) { c.globalCompositeOperation = 'lighter'; c.globalAlpha = (1 - u / .35) * .9; c.strokeStyle = 'rgb(160,255,205)'; c.lineWidth = 3; c.strokeRect(-bw / 2 - u * 70, -bh / 2 - u * 40, bw + u * 140, bh + u * 80); } }
     c.restore();
-    out[i] = { ...proj(bx, by + bh * .5, P_MID).reduce((o, v, j) => (o[j ? 'y' : 'x'] = v, o), {}), w: bw, h: bh };
   }
   c.globalAlpha = 1; c.textAlign = 'left';
   return out;
@@ -1094,8 +1096,11 @@ function drawOverlay(c, t, P, heads, tags, relic, flips) {
   STRIKES.forEach(([ti, u], i) => {
     const tg = tags[ti], U = units[u]; if (!tg || !U) return;
     const s0 = P.strike0 + i * P.strikeStep, b = eo(ramp(t, s0, s0 + P.strikeDur)); if (b <= 0) return;
-    const fx = U.ix, fy = U.T - 6, tx = tg.x, ty = tg.y + 8;
-    const mx = (fx + tx) / 2 + (U.flank < 0 ? -30 : 30), my = (fy + ty) / 2 - 30;   // a slight bow
+    // the strike lands ON the board's edge, square to it, from the side that faces the unit
+    const fx = U.ix, fy = U.T - 6, cy0 = (tg.T + tg.B) / 2;
+    let tx, ty, nx, ny;
+    if (fx < tg.L) { tx = tg.L; ty = cy0; nx = -1; ny = 0; } else if (fx > tg.R) { tx = tg.R; ty = cy0; nx = 1; ny = 0; } else { tx = clamp(fx, tg.L + 12, tg.R - 12); ty = fy > tg.B ? tg.B : tg.T; nx = 0; ny = fy > tg.B ? 1 : -1; }
+    const mx = tx + nx * 90, my = ty + ny * 90;
     const q = (u2) => [(1 - u2) * (1 - u2) * fx + 2 * (1 - u2) * u2 * mx + u2 * u2 * tx, (1 - u2) * (1 - u2) * fy + 2 * (1 - u2) * u2 * my + u2 * u2 * ty];
     const done = b >= 1, la = done ? .5 : .95;
     c.lineWidth = 8; c.strokeStyle = G(.1); c.beginPath(); for (let s = 0; s <= 24; s++) { const [x, y] = q(b * s / 24); s ? c.lineTo(x, y) : c.moveTo(x, y); } c.stroke();
@@ -1105,9 +1110,9 @@ function drawOverlay(c, t, P, heads, tags, relic, flips) {
       c.fillStyle = G(1); c.beginPath(); c.moveTo(hx + Math.cos(an) * 14, hy + Math.sin(an) * 14); c.lineTo(hx + Math.cos(an + 2.5) * 12, hy + Math.sin(an + 2.5) * 12); c.lineTo(hx + Math.cos(an - 2.5) * 12, hy + Math.sin(an - 2.5) * 12); c.closePath(); c.fill();
       c.globalAlpha = .8; c.drawImage(A.gGreen, hx - 22, hy - 22, 44, 44); c.globalAlpha = 1;
       // a reticle closes on the target
-      const rr = lerp(80, tg.w * .5 + 14, b), rot = t * 1.5;
+      const rr = lerp(80, tg.w * .5 + 14, b), rot = t * 1.5, tcx = (tg.L + tg.R) / 2;
       c.strokeStyle = G(.85); c.lineWidth = 2; c.beginPath();
-      for (let q2 = 0; q2 < 4; q2++) { const a0 = rot + q2 * Math.PI / 2; c.moveTo(tx + Math.cos(a0 - .3) * rr, tg.y - tg.h * .5 + Math.sin(a0 - .3) * rr * .6); c.arc(tx, tg.y - tg.h * .5, rr, a0 - .3, a0 + .3); }
+      for (let q2 = 0; q2 < 4; q2++) { const a0 = rot + q2 * Math.PI / 2; c.moveTo(tcx + Math.cos(a0 - .3) * rr, cy0 + Math.sin(a0 - .3) * rr * .6); c.ellipse(tcx, cy0, rr, rr * .6, 0, a0 - .3, a0 + .3); }
       c.stroke();
     }
   });
@@ -1127,6 +1132,9 @@ function burnPath(cx, cy, R, sq, t) {
 }
 function tracePath(c, pts) { c.beginPath(); c.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) c.lineTo(pts[i][0], pts[i][1]); c.closePath(); }
 const m0z = (tc) => tc.m0 * tc.zm / (tc.m0 * tc.zEnd);
+// the hole in the map: lit at the miniature's foot, it spreads, then opens past the frame. R in screen px; sq its vertical squash
+function holeR(t, P, zm) { if (t < P.ignite) return 0; const u = t - P.ignite; return (5 + 70 * sm(clamp(u / .55))) * zm + 2900 * Math.pow(clamp((t - (P.ignite + .55)) / .45), 2.2); }
+const holeSq = (P) => lerp(.24, 1, sm(clamp(P.dive * 1.1)));
 function tableCam(t, P) {
   // the table camera: a slow push, then the dive (zoom about the cathedral miniature, which slides onto the real one)
   const D = P.dive, [gx0, gy0] = tproj(...mapXZ(...MAP_CATH)), m0 = .2;
@@ -1170,23 +1178,22 @@ function drawMini(c, t, P, cam, a) {
   if (a <= 0) return;
   c.save(); c.setTransform(cam.zm, 0, 0, cam.zm, cam.gx - cam.gx0 * cam.zm, cam.gy - cam.gy0 * cam.zm);
   const m0 = cam.m0, x = cam.gx0 - 235 * m0, y = cam.gy0 - CG * m0;
-  c.fillStyle = 'rgba(10,5,2,.5)'; c.beginPath(); c.ellipse(cam.gx0 - 20, cam.gy0 + 2, 70, 10, 0, 0, 6.2832); c.fill();
+  c.fillStyle = `rgba(10,5,2,${(.5 * a).toFixed(3)})`; c.beginPath(); c.ellipse(cam.gx0 - 20, cam.gy0 + 2, 70, 10, 0, 0, 6.2832); c.fill();
   c.globalAlpha = a; c.drawImage(A.mini, x, y, CW * m0, CHh * m0);
   c.restore();
 }
 function table(c, t, P) {
   const k = P.table; if (k <= .002) return;
-  const burning = t >= P.ignite;
-  const cv = burning ? A.tc : null, tc = burning ? cv.getContext('2d') : c;
-  if (burning) { tc.setTransform(1, 0, 0, 1, 0, 0); tc.clearRect(0, 0, W, H); }
+  // the table is painted offscreen whenever it must be faded or cut, then composited (it fades in with the candle's light)
+  const burning = t >= P.ignite, off = burning || k < .999;
+  const cv = off ? A.tc : null, tc = off ? cv.getContext('2d') : c;
+  if (off) { tc.setTransform(1, 0, 0, 1, 0, 0); tc.globalAlpha = 1; tc.globalCompositeOperation = 'source-over'; tc.clearRect(0, 0, W, H); }
   tc.save(); tc.globalAlpha = 1;
   const cam = drawTableScene(tc, t, P);
   tc.restore();
-  let ring = null;
+  let ring = null, R0b = 0;
   if (burning) {
-    // the hole: lit at the miniature's foot, it spreads, then the camera falls through it
-    const u = t - P.ignite, R0b = (5 + 70 * sm(clamp(u / .55))) * cam.zm + 2900 * Math.pow(clamp((t - (P.ignite + .55)) / .45), 2.2);
-    const sq = lerp(.24, 1, sm(clamp(P.dive * 1.1)));
+    R0b = holeR(t, P, cam.zm); const sq = holeSq(P);
     ring = burnPath(cam.gx, cam.gy, R0b, sq, t);
     const cw = 6 + R0b * .09;
     tc.save(); tc.setTransform(1, 0, 0, 1, 0, 0);
@@ -1194,10 +1201,15 @@ function table(c, t, P) {
     tc.globalCompositeOperation = 'source-atop'; tc.lineJoin = 'round';
     for (const [w, col] of [[cw * 2.4, 'rgba(70,36,12,.35)'], [cw * 1.4, 'rgba(34,16,6,.7)'], [cw * .6, 'rgba(8,4,2,.95)']]) { tc.lineWidth = w; tc.strokeStyle = col; tracePath(tc, ring); tc.stroke(); }
     tc.restore();
-    c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = k; c.drawImage(cv, 0, 0); c.restore();
   }
-  // the miniature crossfades into the real ruin as it lands on it
-  drawMini(c, t, P, cam, k * (1 - sm(ramp(P.dive, .72, .98))));
+  if (off) { c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = k; c.drawImage(cv, 0, 0); c.restore(); }
+  globalThis.__tcam = { gx: cam.gx, gy: cam.gy, gx0: cam.gx0, gy0: cam.gy0, zm: cam.zm, R: R0b, sq: holeSq(P), reg: DV.mis, k: DV.k };
+  if (P.out) P.out.tcam = globalThis.__tcam;
+  // the handoff: the miniature stands on the map; where the hole has opened, the real ruin (in register beneath) replaces it
+  // exactly, so the silhouette is wiped from miniature to ruin with no double image
+  if (ring) { c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.beginPath(); c.rect(-10, -10, W + 20, H + 20); c.moveTo(ring[0][0], ring[0][1]); for (let i = ring.length - 1; i >= 0; i--) c.lineTo(ring[i][0], ring[i][1]); c.closePath(); c.clip('evenodd'); }
+  drawMini(c, t, P, cam, k * (1 - sm(ramp(DV.mis, 1.01, 1.08))));   // what the hole has not yet wiped dissolves once register slips
+  if (ring) c.restore();
   c.save(); c.setTransform(1, 0, 0, 1, 0, 0);
   if (ring) {
     c.globalCompositeOperation = 'lighter'; c.lineJoin = 'round';
@@ -1222,6 +1234,21 @@ function table(c, t, P) {
   c.restore();
 }
 
+// the snuffed candle's last breath: a thin wisp that leaves the wick where it was when the candle dropped, curls and thins out
+let WICK = null;
+function candleSmoke(c, t, P) {
+  const t0 = P.candleFall; if (t0 === undefined || t < t0 || t > t0 + 1.4) return;
+  if (!WICK) { const D = clamp((t0 - 4.5) / .97), C = tableCam(t0, { ...P, dive: D }); WICK = [C.gx + (960 - C.gx0) * C.zm, C.gy + (650 - C.gy0) * C.zm, C.zm]; }
+  const [wx, wy, wz] = WICK, u = t - t0;
+  c.save(); c.setTransform(1, 0, 0, 1, 0, 0);
+  for (let i = 0; i < 16; i++) {
+    const v = u - i * .045; if (v <= 0) continue;
+    const rise = v * 260 * wz, x = wx + Math.sin(v * 5 + i * .7) * 18 * wz * v + v * v * 60, y = wy - rise, r = (6 + v * 46) * wz;
+    c.globalAlpha = clamp(.55 * (1 - v / 1.2) * (1 - i / 18)); c.drawImage(A.smokeL, x - r, y - r, r * 2, r * 2);
+  }
+  c.restore();
+}
+
 // ---------------------------------------------------------------- the frame
 // opt-in section profiler (globalThis.__fieldProf = true): each mark flushes the canvas so raster cost lands in its own section
 let PS = null, PC = null; const PM = (n) => { if (!PS) return; PC.getImageData(0, 0, 1, 1); const now = performance.now(); PS.push([n, now - PS.t]); PS.t = now; };
@@ -1241,10 +1268,18 @@ export function drawField(c, t, P, roster, relic) {
     let flash = 0, boltX = 960;
     for (const [t0, x0, , k] of P.bolts) { const f = flashEnv(t - t0) * k; if (f > flash) { flash = f; boltX = x0; } }
     if (P.dawn > 0) flash = 0;
-    DV.k = 1; DV.ax = DV.bx = 0; DV.ay = DV.by = 0;
+    DV.k = 1; DV.ax = DV.bx = 0; DV.ay = DV.by = 0; DV.mis = 1;
     if (P.table > .002 && t < P.ignite + 1.2) {                       // the field under the burning map, in register with the miniature
-      const tc0 = tableCam(t, P), k = clamp(m0z(tc0) , .05, 1);
-      DV.k = k; DV.ax = tc0.tx; DV.ay = tc0.ty; DV.bx = tc0.gx; DV.by = tc0.gy;
+      const tc0 = tableCam(t, P), k = clamp(m0z(tc0), .05, 1), R = holeR(t, P, tc0.zm) * 1.26, sq = holeSq(P);   // burnPath's ragged edge reaches 1.24 R
+      const pL = Math.max(0, tc0.gx - R), pR = Math.min(W, tc0.gx + R), pT = Math.max(0, tc0.gy - R * sq), pB = Math.min(H, tc0.gy + R * sq);
+      // the field's painted extent at k = 1 (sky, ground, rise and horde plates), shrunk by a 1.15x overscan margin
+      const mx = 30, my = 30, fL = -200 + mx, fR = W + 100 - mx, fT = -60 + my, fB = H + 30 - my, ax = tc0.tx, ay = tc0.ty, bx = tc0.gx, by = tc0.gy;
+      const need = Math.max(k, pL < bx ? (bx - pL) / (ax - fL) : 0, pR > bx ? (pR - bx) / (fR - ax) : 0, pT < by ? (by - pT) / (ay - fT) : 0, pB > by ? (pB - by) / (fB - ay) : 0);
+      // the cover scale settles to exactly 1 as the camera lands (b reaches a), so the field arrives at its own framing with no pop
+      // eased in log space ahead of the hole's explosion (the plunge), never below what the hole needs
+      const ease = eo(ramp(t, P.ignite + .57, P.ignite + .81)), kz = Math.exp(Math.log(k) * (1 - ease));
+      const kk = lerp(Math.max(need, kz), 1, sm(ramp(P.dive, .86, 1)));
+      DV.k = Math.min(Math.max(kk, k), 1.6); DV.ax = ax; DV.ay = ay; DV.bx = bx; DV.by = by; DV.mis = DV.k / k;
       const bg = c.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, 'rgb(6,9,12)'); bg.addColorStop(.6, 'rgb(40,40,40)'); bg.addColorStop(1, 'rgb(9,10,12)'); c.fillStyle = bg; c.fillRect(0, 0, W, H);
     }
     drawSky(c, t, P, flash, boltX); PM('drawSky');
@@ -1267,7 +1302,7 @@ export function drawField(c, t, P, roster, relic) {
     // tags flip as the strikes land
     const flips = [];
     STRIKES.forEach(([ti], i) => { const land = P.strike0 + i * P.strikeStep + P.strikeDur; flips[ti] = t >= land ? 1 + (t - land) : 0; });
-    const tags = drawTags(c, t, P, carriers, flips); PM('drawTags');
+    const tags = drawTags(c, t, P, carriers, flips, 0); PM('drawTags');
     // our line
     const sel = [0, 0, 0, 0];
     STRIKES.forEach(([, u], i) => { const s0 = P.strike0 + i * P.strikeStep; if (t > s0 && t < s0 + P.strikeDur + .3) sel[u] = 1; });
@@ -1276,6 +1311,7 @@ export function drawField(c, t, P, roster, relic) {
     const heads = [];
     for (const i of order) { const k = KN[i]; heads[i] = { ...knightDraw(c, k, t, P, flash, sel[k.unit]), name: k.name, unit: k.unit, flank: k.flank }; } PM('knights');
     drawOverlay(c, t, P, heads, tags, relic, flips); PM('drawOverlay');
+    drawTags(c, t, P, carriers, flips, 1);
     c.setTransform(1, 0, 0, 1, 0, 0);
     // near rain, in front of everything
     if (P.dawn < 1) {
@@ -1300,6 +1336,7 @@ export function drawField(c, t, P, roster, relic) {
     if (P.dim > 0) { c.fillStyle = rgba(3, 4, 5, P.dim * P.field); c.fillRect(0, 0, W, H); }
   }
   table(c, t, P); PM('table');
+  candleSmoke(c, t, P);
   c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
   const ms = performance.now() - T0;
   const L = (globalThis.__fieldMs ||= []); L.push([t, ms]); if (L.length > 300) L.shift();   // drawField ms, for the timing harness
